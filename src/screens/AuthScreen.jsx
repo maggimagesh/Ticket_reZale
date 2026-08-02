@@ -98,7 +98,15 @@ export function AuthScreen({ wide, onAuthenticated }) {
   };
 
   return (
-    <div className="auth">
+    <div className={'auth' + (wide ? '' : ' auth--immersive')}>
+      {/* Narrow screens have no pitch pane, so the swarm becomes a full-bleed
+          backdrop behind the card. Inert: it never takes pointer or focus. */}
+      {!wide && (
+        <div className="auth__backdrop" aria-hidden="true">
+          <TicketSwarm3D />
+        </div>
+      )}
+
       {wide && (
         <div className="auth__pitch">
           <div className="brand">
@@ -162,7 +170,7 @@ export function AuthScreen({ wide, onAuthenticated }) {
                   className="input input--adorned-right"
                   name="username"
                   autoComplete="username"
-                  placeholder="e.g. meera_watches"
+                  placeholder="e.g. magesh_at"
                   value={username}
                   onChange={(e) => {
                     setUsername(e.target.value);

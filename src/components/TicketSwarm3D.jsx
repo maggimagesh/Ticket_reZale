@@ -229,9 +229,26 @@ export function TicketSwarm3D() {
   return <div className="swarm3d" ref={hostRef} aria-hidden="true" />;
 }
 
+const FOV = 46;
+const CAM_Z = 1.05;
+/** Half-height of the slab the camera sees at the domain's mid-plane. */
+const VIS_HALF_H = Math.tan((FOV * Math.PI) / 180 / 2) * CAM_Z;
+
+/**
+ * Half-width of the simulation box for a given viewport aspect. The domain
+ * runs 1.5× wider than what the camera sees, so sheets drift in and out of
+ * frame instead of milling about on screen. Holding that ratio matters on a
+ * portrait phone: a fixed width would put most of the box off-screen and the
+ * few visible sheets would read as an empty scene.
+ */
+function boundsX(aspect) {
+  return Math.max(0.34, Math.min(0.8, VIS_HALF_H * aspect * 1.5));
+}
+
 function mount(THREE, host) {
   const tier = deviceTier();
-  const bounds = { x: 0.8, y: 0.46, z: 0.42 };
+  const aspect0 = Math.max(1, host.clientWidth) / Math.max(1, host.clientHeight);
+  const bounds = { x: boundsX(aspect0), y: 0.46, z: 0.42 };
 
   const renderer = new THREE.WebGLRenderer({
     alpha: true,
@@ -243,8 +260,8 @@ function mount(THREE, host) {
   host.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(46, 1, 0.1, 60);
-  camera.position.set(0, 0, 1.05);
+  const camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 60);
+  camera.position.set(0, 0, CAM_Z);
 
   const atlas = new THREE.CanvasTexture(buildAtlas());
   atlas.colorSpace = THREE.SRGBColorSpace;
@@ -404,6 +421,8 @@ function mount(THREE, host) {
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
+    // Orientation changes reshape the box; wrap() reads bounds every step.
+    bounds.x = boundsX(camera.aspect);
     glassZ = camera.position.z - glassDistance(0.45);
   }
   resize();

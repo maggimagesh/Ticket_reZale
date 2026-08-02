@@ -794,12 +794,77 @@
   align-items: center;
   justify-content: center;
   padding: 32px 20px;
+  position: relative; /* lifts the form above .auth__backdrop */
+  z-index: 1;
 }
 
 .auth__card {
   width: 100%;
   max-width: 412px;
   animation: rise 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ---- narrow-screen backdrop -------------------------------------------
+   Below the pitch-pane breakpoint the swarm fills the viewport behind the
+   card instead of disappearing. Fixed, so it doesn't grow the page or
+   scroll with a long signup form, and inert to every input. ------------- */
+
+.auth__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  touch-action: none;
+  user-select: none;
+  background: var(--bg);
+}
+
+/* Veil between the canvas and the form — the card's text has to win. */
+.auth__backdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+  opacity: 0.68;
+}
+
+/* Where colour mixing is available the veil gets lighter: the card carries its
+   own scrim, so only the strips of backdrop around it need holding back. */
+@supports (background: color-mix(in srgb, red 50%, transparent)) {
+  .auth__backdrop::after {
+    opacity: 1;
+    background: color-mix(in srgb, var(--bg) 42%, transparent);
+  }
+}
+
+/* The swarm hosts size themselves for the pitch column; inside the backdrop
+   they simply fill it. */
+.auth__backdrop .swarm3d,
+.auth__backdrop .swarm {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  flex: none;
+}
+
+/* A little more air than the plain pane, so the swarm reads around the card. */
+.auth--immersive .auth__pane {
+  padding: 40px 22px;
+}
+
+/* Frosted card so the form stays legible over moving tickets. */
+.auth--immersive .auth__card {
+  padding: 26px 22px 22px;
+  border: 1px solid var(--line2);
+  border-radius: 18px;
+  background: var(--glass);
+  backdrop-filter: blur(18px) saturate(1.3);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  box-shadow: var(--sh3);
 }
 
 .auth__card .brand {
