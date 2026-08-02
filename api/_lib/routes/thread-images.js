@@ -1,14 +1,14 @@
 import { randomUUID } from 'crypto';
-import { getAuthUser } from '../../../_lib/auth-request.js';
-import { assertThreadAccess } from '../../../_lib/chat-access.js';
+import { getAuthUser } from '../auth-request.js';
+import { assertThreadAccess } from '../chat-access.js';
 import {
   assertImageUpload,
   isThreadExpired,
   MAX_IMAGE_BYTES,
   purgeExpiredChats,
-} from '../../../_lib/chat-expiry.js';
-import { allowMethods, readJson, sendError, sendJson } from '../../../_lib/http.js';
-import { getSupabase } from '../../../_lib/supabase.js';
+} from '../chat-expiry.js';
+import { allowMethods, readJson, sendError, sendJson } from '../http.js';
+import { getSupabase } from '../supabase.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -32,7 +32,7 @@ function threadIdFrom(req) {
  *
  * Direct Storage upload avoids Vercel’s ~4.5MB body limit for 5MB images.
  */
-export default async function handler(req, res) {
+export default async function route(req, res) {
   if (!allowMethods(req, res, ['POST'])) return;
 
   const user = getAuthUser(req);

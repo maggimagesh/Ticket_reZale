@@ -2,10 +2,6 @@ import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
 const ROUTES = {
-  '/api/auth/signup': () => import('./api/auth/signup.js'),
-  '/api/auth/login': () => import('./api/auth/login.js'),
-  '/api/auth/username-available': () => import('./api/auth/username-available.js'),
-  '/api/auth/logout': () => import('./api/auth/logout.js'),
   '/api/listings': () => import('./api/listings.js'),
   '/api/theatres': () => import('./api/theatres.js'),
   '/api/movies': () => import('./api/movies.js'),
@@ -15,8 +11,17 @@ const ROUTES = {
   '/api/purchases': () => import('./api/purchases.js'),
 };
 
-/** Match /api/listings/:id and /api/chat/threads/:id(/messages|/typing) */
+/** Mirrors Vercel's file routing for the dev server. */
 function matchDynamic(path) {
+  const auth = path.match(/^\/api\/auth\/([^/]+)\/?$/);
+  if (auth) {
+    return {
+      load: () => import('./api/auth/[action].js'),
+      params: { action: auth[1] },
+      query: { action: auth[1] },
+    };
+  }
+
   const listing = path.match(/^\/api\/listings\/([^/]+)\/?$/);
   if (listing) {
     return {
@@ -24,42 +29,16 @@ function matchDynamic(path) {
       params: { id: listing[1] },
     };
   }
-  const typing = path.match(/^\/api\/chat\/threads\/([^/]+)\/typing\/?$/);
-  if (typing) {
+  const threadSub = path.match(/^\/api\/chat\/threads\/([^/]+)\/(.+?)\/?$/);
+  if (threadSub) {
+    const rest = threadSub[2].split('/');
     return {
-      load: () => import('./api/chat/threads/[id]/typing.js'),
-      params: { id: typing[1] },
+      load: () => import('./api/chat/threads/[id]/[...rest].js'),
+      params: { id: threadSub[1] },
+      query: { id: threadSub[1], rest },
     };
   }
-  const imageFile = path.match(/^\/api\/chat\/threads\/([^/]+)\/images\/([^/]+)\/?$/);
-  if (imageFile) {
-    return {
-      load: () => import('./api/chat/threads/[id]/images/[messageId].js'),
-      params: { id: imageFile[1], messageId: imageFile[2] },
-    };
-  }
-  const images = path.match(/^\/api\/chat\/threads\/([^/]+)\/images\/?$/);
-  if (images) {
-    return {
-      load: () => import('./api/chat/threads/[id]/images.js'),
-      params: { id: images[1] },
-    };
-  }
-  // Must be tested before the plain /messages route below
-  const messageItem = path.match(/^\/api\/chat\/threads\/([^/]+)\/messages\/([^/]+)\/?$/);
-  if (messageItem) {
-    return {
-      load: () => import('./api/chat/threads/[id]/messages/[messageId].js'),
-      params: { id: messageItem[1], messageId: messageItem[2] },
-    };
-  }
-  const messages = path.match(/^\/api\/chat\/threads\/([^/]+)\/messages\/?$/);
-  if (messages) {
-    return {
-      load: () => import('./api/chat/threads/[id]/messages.js'),
-      params: { id: messages[1] },
-    };
-  }
+
   const thread = path.match(/^\/api\/chat\/threads\/([^/]+)\/?$/);
   if (thread) {
     return {
@@ -84,6 +63,7 @@ function localApiPlugin() {
 
         try {
           if (dynamic?.params) req.params = { ...(req.params || {}), ...dynamic.params };
+          if (dynamic?.query) req.query = { ...(req.query || {}), ...dynamic.query };
           const { default: handler } = await load();
           await handler(req, res);
         } catch (err) {

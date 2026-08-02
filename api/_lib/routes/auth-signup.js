@@ -1,6 +1,6 @@
-import { getSupabase } from '../_lib/supabase.js';
-import { hashPassword, passwordMeetsRules } from '../_lib/password.js';
-import { signToken } from '../_lib/token.js';
+import { getSupabase } from '../supabase.js';
+import { hashPassword, passwordMeetsRules } from '../password.js';
+import { signToken } from '../token.js';
 import {
   allowMethods,
   normalizeUsername,
@@ -8,9 +8,9 @@ import {
   sendError,
   sendJson,
   validateUsernameFormat,
-} from '../_lib/http.js';
+} from '../http.js';
 
-export default async function handler(req, res) {
+export default async function route(req, res) {
   if (!allowMethods(req, res, ['POST'])) return;
 
   try {

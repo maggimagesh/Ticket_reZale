@@ -1,7 +1,7 @@
-import { getAuthUser } from '../../../_lib/auth-request.js';
-import { assertThreadAccess } from '../../../_lib/chat-access.js';
-import { allowMethods, readJson, sendError, sendJson } from '../../../_lib/http.js';
-import { getSupabase } from '../../../_lib/supabase.js';
+import { getAuthUser } from '../auth-request.js';
+import { assertThreadAccess } from '../chat-access.js';
+import { allowMethods, readJson, sendError, sendJson } from '../http.js';
+import { getSupabase } from '../supabase.js';
 
 const TYPING_TTL_MS = 4000;
 
@@ -26,7 +26,7 @@ function isFresh(iso) {
  * GET  /api/chat/threads/:id/typing — { peerTyping }
  * POST /api/chat/threads/:id/typing — { typing: true|false }
  */
-export default async function handler(req, res) {
+export default async function route(req, res) {
   const method = (req.method || '').toUpperCase();
   if (!allowMethods(req, res, ['GET', 'POST'])) return;
 

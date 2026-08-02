@@ -1,11 +1,11 @@
-import { getSupabase } from '../_lib/supabase.js';
+import { getSupabase } from '../supabase.js';
 import {
   allowMethods,
   normalizeUsername,
   sendError,
   sendJson,
   validateUsernameFormat,
-} from '../_lib/http.js';
+} from '../http.js';
 
 function queryUsername(req) {
   try {
@@ -17,7 +17,7 @@ function queryUsername(req) {
   }
 }
 
-export default async function handler(req, res) {
+export default async function route(req, res) {
   if (!allowMethods(req, res, ['GET'])) return;
 
   try {

@@ -1,8 +1,8 @@
-import { getAuthUser } from '../../../../_lib/auth-request.js';
-import { assertThreadAccess } from '../../../../_lib/chat-access.js';
-import { isThreadExpired, purgeExpiredChats } from '../../../../_lib/chat-expiry.js';
-import { allowMethods, sendError } from '../../../../_lib/http.js';
-import { getSupabase } from '../../../../_lib/supabase.js';
+import { getAuthUser } from '../auth-request.js';
+import { assertThreadAccess } from '../chat-access.js';
+import { isThreadExpired, purgeExpiredChats } from '../chat-expiry.js';
+import { allowMethods, sendError } from '../http.js';
+import { getSupabase } from '../supabase.js';
 
 function idsFrom(req) {
   if (req.params?.id && req.params?.messageId) {
@@ -23,7 +23,7 @@ function idsFrom(req) {
  * Streams the image for view/download (auth + thread membership required).
  * ?download=1 → Content-Disposition: attachment
  */
-export default async function handler(req, res) {
+export default async function route(req, res) {
   if (!allowMethods(req, res, ['GET'])) return;
 
   const user = getAuthUser(req);

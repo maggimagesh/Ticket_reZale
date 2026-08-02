@@ -1,8 +1,8 @@
-import { getAuthUser } from '../../../_lib/auth-request.js';
-import { assertThreadAccess } from '../../../_lib/chat-access.js';
-import { isThreadExpired, purgeExpiredChats } from '../../../_lib/chat-expiry.js';
-import { allowMethods, readJson, sendError, sendJson } from '../../../_lib/http.js';
-import { getSupabase } from '../../../_lib/supabase.js';
+import { getAuthUser } from '../auth-request.js';
+import { assertThreadAccess } from '../chat-access.js';
+import { isThreadExpired, purgeExpiredChats } from '../chat-expiry.js';
+import { allowMethods, readJson, sendError, sendJson } from '../http.js';
+import { getSupabase } from '../supabase.js';
 
 const MSG_SELECT =
   'id, sender_id, ciphertext, iv, created_at, updated_at, read_at, kind, ' +
@@ -51,7 +51,7 @@ function shapeMessage(m, userId) {
  * POST /api/chat/threads/:id/messages — { ciphertext, iv }
  * PATCH — mark peer messages read { read: true }
  */
-export default async function handler(req, res) {
+export default async function route(req, res) {
   const method = (req.method || '').toUpperCase();
   if (!allowMethods(req, res, ['GET', 'POST', 'PATCH'])) return;
 

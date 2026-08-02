@@ -1,8 +1,8 @@
-import { getAuthUser } from '../../../../_lib/auth-request.js';
-import { assertThreadAccess } from '../../../../_lib/chat-access.js';
-import { isThreadExpired } from '../../../../_lib/chat-expiry.js';
-import { allowMethods, readJson, sendError, sendJson } from '../../../../_lib/http.js';
-import { getSupabase } from '../../../../_lib/supabase.js';
+import { getAuthUser } from '../auth-request.js';
+import { assertThreadAccess } from '../chat-access.js';
+import { isThreadExpired } from '../chat-expiry.js';
+import { allowMethods, readJson, sendError, sendJson } from '../http.js';
+import { getSupabase } from '../supabase.js';
 
 const MSG_SELECT =
   'id, thread_id, sender_id, ciphertext, iv, created_at, updated_at, read_at, kind, ' +
@@ -58,7 +58,7 @@ function shape(m, userId) {
  * scope=me  — hides the message for the caller only (either party, any message)
  * scope=all — sender only; leaves a tombstone both parties can see
  */
-export default async function handler(req, res) {
+export default async function route(req, res) {
   const method = (req.method || '').toUpperCase();
   if (!allowMethods(req, res, ['PATCH', 'DELETE'])) return;
 
