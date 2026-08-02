@@ -9,6 +9,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "catalyst:prepare-api": "node scripts/prepare-catalyst-api.mjs",
+    "catalyst:prepare": "npm run catalyst:prepare-api",
     "test:physics": "node test/ticketPhysics.test.mjs",
     "test:e2e": "node test/e2eIdentity.test.mjs",
     "test": "npm run test:physics && npm run test:e2e"

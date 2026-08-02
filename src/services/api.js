@@ -20,8 +20,9 @@ import {
   wrapConversationKey,
 } from '../lib/e2eCrypto.js';
 import { authHeaders, loadSession } from './authService.js';
+import { API_BASE } from './apiBase.js';
 
-export const API_BASE = '/api';
+export { API_BASE } from './apiBase.js';
 
 export class ApiError extends Error {
   constructor(message, status = 500) {
@@ -500,4 +501,3 @@ export async function deleteListing(id) {
   });
   return parseResponse(res, 'Failed to delete listing');
 }
-
