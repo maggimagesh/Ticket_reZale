@@ -162,7 +162,7 @@ function ImageLightbox({ src, alt, onClose, onDownload, busy }) {
 
 function ChatImage({ threadId, message, mine }) {
   const [src, setSrc] = useState(message.localPreview || null);
-  const [err, setErr] = useState(false);
+  const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const [zoomed, setZoomed] = useState(false);
 
@@ -172,19 +172,28 @@ function ChatImage({ threadId, message, mine }) {
     }
     let alive = true;
     let objectUrl = null;
+    setErr('');
     (async () => {
       try {
         const blob = await api.fetchImageBlob(threadId, message.id);
         if (!alive) return;
         objectUrl = URL.createObjectURL(blob);
         setSrc(objectUrl);
-      } catch {
-        if (alive) setErr(true);
+      } catch (e) {
+        if (!alive) return;
+        // Keep the reason. Collapsing 401/403/404/network into one message
+        // makes this impossible to diagnose from a bug report.
+        console.error('[chat image]', threadId, message.id, e.status ?? '', e.message);
+        setErr(e.status ? `${e.message} (${e.status})` : e.message || 'Image unavailable');
       }
     })();
     return () => {
       alive = false;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      if (objectUrl) {
+        // Drop the reference before revoking, or <img> keeps a dead blob URL.
+        setSrc((current) => (current === objectUrl ? null : current));
+        URL.revokeObjectURL(objectUrl);
+      }
     };
   }, [threadId, message.id, message.hasImage, message.localPreview]);
 
@@ -202,7 +211,7 @@ function ChatImage({ threadId, message, mine }) {
 
   return (
     <div className={'chatimg' + (mine ? ' chatimg--mine' : '')}>
-      {err && <p className="chatimg__err">Image unavailable</p>}
+      {err && <p className="chatimg__err">{err}</p>}
       {!err && src && (
         <button
           type="button"
