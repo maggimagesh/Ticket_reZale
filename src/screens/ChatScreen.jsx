@@ -310,7 +310,11 @@ export function ChatScreen({ chat, wide, onBack }) {
   const dealNote = (() => {
     if (!active) return '';
     if (active.sold) return 'Deal done — both sides confirmed.';
-    if (tradeClosed) return 'Listing removed — buy/sell is closed. Chat stays until 48h expiry.';
+    if (tradeClosed) {
+      return active?.expiresAt
+        ? 'Listing removed — buy/sell is closed. Chat stays until 48h expiry.'
+        : 'Listing removed — buy/sell is closed. The chat stays open.';
+    }
     if (isSeller && !buyerReady) return 'Waiting for buyer to confirm purchase…';
     if (isBuyer && (active.iConfirmed || dealDone)) return `Waiting for ${peer} to confirm sale…`;
     if (isSeller && buyerReady && !(active.iConfirmed || dealDone)) {
@@ -464,7 +468,7 @@ export function ChatScreen({ chat, wide, onBack }) {
           </div>
         </div>
 
-        {active && (
+        {active?.expiresAt && (
           <div className="chat-policy" role="note">
             Chats will be deleted after 48 hours
           </div>
@@ -526,7 +530,8 @@ export function ChatScreen({ chat, wide, onBack }) {
 
           {!loading && !messages.length && active && (
             <p className="messages__empty">
-              Say hi or share a ticket photo — messages and images expire after 48 hours.
+              Say hi or share a ticket photo to agree the handover.
+              {active?.expiresAt ? ' Messages and images expire after 48 hours.' : ''}
             </p>
           )}
 
@@ -663,7 +668,9 @@ export function ChatScreen({ chat, wide, onBack }) {
             <p className="composer__hint">
               {active?.pendingSellerKeys
                 ? 'Waiting for the seller to enable secure messaging'
-                : 'E2E encrypted · Auto-deleted after 48 hours'}
+                : active?.expiresAt
+                  ? 'End-to-end encrypted · Auto-deleted after 48 hours'
+                  : 'End-to-end encrypted'}
             </p>
           )}
         </div>

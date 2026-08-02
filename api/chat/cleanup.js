@@ -1,19 +1,23 @@
 import { timingSafeEqual } from 'crypto';
-import { purgeExpiredChats } from '../_lib/chat-expiry.js';
+import { CHAT_RETENTION_ENABLED, purgeExpiredChats } from '../_lib/chat-expiry.js';
 import { allowMethods, sendError, sendJson } from '../_lib/http.js';
 import { getSupabase } from '../_lib/supabase.js';
 
 /**
  * POST /api/chat/cleanup — purge chats + images older than 48 hours.
- * Also run lazily from chat list/message endpoints.
- * Optional Vercel Cron: Authorization Bearer CRON_SECRET
+ *
+ * Dormant while CHAT_RETENTION_ENABLED is false. The route is kept so that
+ * re-enabling retention needs only the flag and a cron entry in vercel.json.
+ * Vercel Cron authenticates with Authorization: Bearer CRON_SECRET.
  */
 export default async function handler(req, res) {
   if (!allowMethods(req, res, ['POST', 'GET'])) return;
 
+  if (!CHAT_RETENTION_ENABLED) {
+    return sendJson(res, 200, { ok: true, deleted: 0, retention: 'disabled' });
+  }
+
   // Fail closed: an unset secret must disable this endpoint, not unlock it.
-  // Expired chats are still purged lazily by the chat list/message/image
-  // handlers, so retention keeps working either way.
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     console.error('[chat/cleanup] CRON_SECRET is not set — endpoint disabled');
