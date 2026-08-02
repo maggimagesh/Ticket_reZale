@@ -293,9 +293,9 @@ export async function getThread(threadId) {
 }
 
 export async function getMessages(threadId, threadHint, { after = 0 } = {}) {
-  const qs = after > 0 ? `?after=${encodeURIComponent(after)}` : '';
+  const qs = after > 0 ? `&after=${encodeURIComponent(after)}` : '';
   const res = await fetch(
-    `${API_BASE}/chat/threads/${encodeURIComponent(threadId)}/messages${qs}`,
+    `${API_BASE}/chat/threads/${encodeURIComponent(threadId)}?section=messages${qs}`,
     { headers: { ...authHeaders() } },
   );
   const rows = await parseResponse(res, 'Failed to load messages');
@@ -320,7 +320,7 @@ export async function sendMessage(threadId, text, threadHint) {
   const key = await ensureConversationKey(thread);
   const { ciphertext, iv } = await encryptMessage(key, text);
 
-  const res = await fetch(`${API_BASE}/chat/threads/${encodeURIComponent(threadId)}/messages`, {
+  const res = await fetch(`${API_BASE}/chat/threads/${encodeURIComponent(threadId)}?section=messages`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ ciphertext, iv }),
@@ -336,7 +336,7 @@ export async function editMessage(threadId, messageId, text, threadHint) {
   const { ciphertext, iv } = await encryptMessage(key, text);
 
   const res = await fetch(
-    `${API_BASE}/chat/threads/${encodeURIComponent(threadId)}/messages/${encodeURIComponent(messageId)}`,
+    `${API_BASE}/chat/threads/${encodeURIComponent(threadId)}?section=messages&messageId=${encodeURIComponent(messageId)}`,
     {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...authHeaders() },
@@ -350,7 +350,7 @@ export async function editMessage(threadId, messageId, text, threadHint) {
 /** scope 'me' hides it for you; scope 'all' tombstones it for both parties. */
 export async function deleteMessage(threadId, messageId, scope = 'me') {
   const res = await fetch(
-    `${API_BASE}/chat/threads/${encodeURIComponent(threadId)}/messages/${encodeURIComponent(messageId)}?scope=${scope === 'all' ? 'all' : 'me'}`,
+    `${API_BASE}/chat/threads/${encodeURIComponent(threadId)}?section=messages&messageId=${encodeURIComponent(messageId)}&scope=${scope === 'all' ? 'all' : 'me'}`,
     { method: 'DELETE', headers: { ...authHeaders() } },
   );
   return parseResponse(res, 'Failed to delete message');
@@ -373,7 +373,7 @@ export async function sendImage(threadId, file, threadHint) {
   const caption = `[Image] ${file.name || 'photo'}`;
   const { ciphertext, iv } = await encryptMessage(key, caption);
 
-  const signRes = await fetch(`${API_BASE}/chat/threads/${encodeURIComponent(threadId)}/images`, {
+  const signRes = await fetch(`${API_BASE}/chat/threads/${encodeURIComponent(threadId)}?section=images`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({
@@ -396,7 +396,7 @@ export async function sendImage(threadId, file, threadHint) {
     throw new ApiError('Could not upload image to storage', put.status);
   }
 
-  const commitRes = await fetch(`${API_BASE}/chat/threads/${encodeURIComponent(threadId)}/images`, {
+  const commitRes = await fetch(`${API_BASE}/chat/threads/${encodeURIComponent(threadId)}?section=images`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({
@@ -423,8 +423,8 @@ export async function sendImage(threadId, file, threadHint) {
 
 /** Authenticated image URL for display/download. */
 export function imageUrl(threadId, messageId, { download = false } = {}) {
-  const q = download ? '?download=1' : '';
-  return `${API_BASE}/chat/threads/${encodeURIComponent(threadId)}/images/${encodeURIComponent(messageId)}${q}`;
+  const q = download ? '&download=1' : '';
+  return `${API_BASE}/chat/threads/${encodeURIComponent(threadId)}?section=images&messageId=${encodeURIComponent(messageId)}${q}`;
 }
 
 /** Fetch image blob with auth (for <img> via object URL or file download). */
@@ -458,7 +458,7 @@ export async function downloadImage(threadId, messageId, filename = 'ticket-imag
 }
 
 export async function markThreadRead(threadId) {
-  const res = await fetch(`${API_BASE}/chat/threads/${encodeURIComponent(threadId)}/messages`, {
+  const res = await fetch(`${API_BASE}/chat/threads/${encodeURIComponent(threadId)}?section=messages`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ read: true }),
@@ -468,7 +468,7 @@ export async function markThreadRead(threadId) {
 
 /** Heartbeat while composing — peer sees typing dots for a few seconds. */
 export async function setTyping(threadId, typing) {
-  const res = await fetch(`${API_BASE}/chat/threads/${encodeURIComponent(threadId)}/typing`, {
+  const res = await fetch(`${API_BASE}/chat/threads/${encodeURIComponent(threadId)}?section=typing`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ typing: !!typing }),
@@ -477,7 +477,7 @@ export async function setTyping(threadId, typing) {
 }
 
 export async function getPeerTyping(threadId) {
-  const res = await fetch(`${API_BASE}/chat/threads/${encodeURIComponent(threadId)}/typing`, {
+  const res = await fetch(`${API_BASE}/chat/threads/${encodeURIComponent(threadId)}?section=typing`, {
     headers: { ...authHeaders() },
   });
   const data = await parseResponse(res, 'Failed to load typing');

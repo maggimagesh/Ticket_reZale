@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 
 const ROUTES = {
   '/api/listings': () => import('./api/listings.js'),
+  '/api/chat/threads': () => import('./api/chat/threads.js'),
   '/api/theatres': () => import('./api/theatres.js'),
   '/api/movies': () => import('./api/movies.js'),
   '/api/chat/keys': () => import('./api/chat/keys.js'),
@@ -28,13 +29,12 @@ function matchDynamic(path) {
       params: { id: listing[1] },
     };
   }
-  const threads = path.match(/^\/api\/chat\/threads(?:\/(.*))?\/?$/);
-  if (threads) {
-    const segs = (threads[1] || '').split('/').filter(Boolean);
+  const thread = path.match(/^\/api\/chat\/threads\/([^/]+)\/?$/);
+  if (thread) {
     return {
-      load: () => import('./api/chat/threads/[[...path]].js'),
-      params: { path: segs },
-      query: { path: segs },
+      load: () => import('./api/chat/threads/[id].js'),
+      params: { id: thread[1] },
+      query: { id: thread[1] },
     };
   }
   return null;

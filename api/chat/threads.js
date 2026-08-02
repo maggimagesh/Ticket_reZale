@@ -1,14 +1,14 @@
-import { getAuthUser } from '../auth-request.js';
-import { purgeExpiredChats } from '../chat-expiry.js';
-import { shapeThread, THREAD_SELECT } from '../chat-thread.js';
-import { allowMethods, readJson, sendError, sendJson } from '../http.js';
-import { getSupabase } from '../supabase.js';
+import { getAuthUser } from '../_lib/auth-request.js';
+import { purgeExpiredChats } from '../_lib/chat-expiry.js';
+import { shapeThread, THREAD_SELECT } from '../_lib/chat-thread.js';
+import { allowMethods, readJson, sendError, sendJson } from '../_lib/http.js';
+import { getSupabase } from '../_lib/supabase.js';
 
 /**
  * GET  /api/chat/threads — my threads
  * POST /api/chat/threads — open/reuse negotiation (buyer); body includes wrapped keys
  */
-export default async function route(req, res) {
+export default async function handler(req, res) {
   const method = (req.method || '').toUpperCase();
   if (!allowMethods(req, res, ['GET', 'POST'])) return;
 
