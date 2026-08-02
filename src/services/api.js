@@ -105,11 +105,12 @@ export async function fetchMyKeyBundle() {
   return parseResponse(res, 'Failed to load chat keys');
 }
 
-export async function uploadPublicKey(publicKey) {
+/** Store the public key plus the sealed private key for this account. */
+export async function uploadKeyBundle({ publicKey, encPrivateKey, keySalt, keyIv }) {
   const res = await fetch(`${API_BASE}/chat/keys`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify({ publicKey }),
+    body: JSON.stringify({ publicKey, encPrivateKey, keySalt, keyIv }),
   });
   return parseResponse(res, 'Failed to save chat keys');
 }
@@ -123,17 +124,21 @@ export async function fetchPeerPublicKey(username) {
   return data;
 }
 
-/** Ensure device identity keys exist and public key is registered (no password). */
-export async function setupEncryptedChat() {
+/**
+ * Unlock the account's chat identity in this browser.
+ *
+ * Pass the password at sign-in so the sealed key can be recovered; later calls
+ * reuse the browser cache. Without either, this throws IdentityLockedError and
+ * the chat renders in its sealed state.
+ */
+export async function setupEncryptedChat(password) {
   const session = loadSession();
   if (!session?.userId) throw new Error('Log in required');
   return bootstrapIdentity({
     userId: session.userId,
-    fetchPublicKey: async () => {
-      const bundle = await fetchMyKeyBundle();
-      return { publicKey: bundle.publicKey };
-    },
-    uploadPublicKey,
+    password,
+    fetchBundle: fetchMyKeyBundle,
+    uploadKeys: (keys) => uploadKeyBundle(keys),
   });
 }
 
@@ -160,15 +165,31 @@ async function ensureConversationKey(thread) {
 }
 
 async function decryptThreadMessages(thread, messages) {
-  const key = await ensureConversationKey(thread);
+  // Identity keys are per browser, so a thread opened on another browser or
+  // origin was sealed to a key this device does not hold. That is not a
+  // reason to fail the whole load: timestamps, senders and images still work,
+  // so mark the bodies and let the chat render.
+  let key = null;
+  try {
+    key = await ensureConversationKey(thread);
+  } catch {
+    key = null;
+  }
+
   const out = [];
   for (const m of messages) {
+    if (!key) {
+      out.push({ ...m, text: '', sealed: true });
+      continue;
+    }
     let text = m.text;
     if (text == null && m.ciphertext && m.iv) {
       try {
         text = await decryptMessage(key, m.ciphertext, m.iv);
       } catch {
-        text = '[Unable to decrypt]';
+        text = '';
+        out.push({ ...m, text, sealed: true });
+        continue;
       }
     }
     out.push({ ...m, text: text ?? '' });

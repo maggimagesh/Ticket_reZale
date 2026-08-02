@@ -149,7 +149,69 @@ export async function decryptMessage(aesKey, ciphertextB64, ivB64) {
   return td.decode(plain);
 }
 
-/* -------- device-local identity (no password unlock) -------- */
+/* ---------------- password-derived key material ----------------
+   Two independent values come from the password, with different salts and
+   domain-separation labels:
+
+     authSecret — sent to the server in place of the password. The server
+                  bcrypts it, so it never sees the password itself.
+     kek        — encrypts the identity private key. Never leaves the browser.
+
+   Because the server only ever holds authSecret, it cannot derive kek and
+   therefore cannot decrypt a user's chats. The cost is that password strength
+   can only be enforced client-side. */
+
+const AUTH_ITERATIONS = 200_000;
+const KEK_ITERATIONS = 250_000;
+
+async function pbkdf2(password, salt, iterations, bits) {
+  const base = await crypto.subtle.importKey('raw', te.encode(password), 'PBKDF2', false, [
+    'deriveBits',
+  ]);
+  return crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
+    base,
+    bits,
+  );
+}
+
+/** Verifier sent to /api/auth/* instead of the password. */
+export async function deriveAuthSecret(username, password) {
+  const salt = te.encode(`rezale-auth|${String(username).trim().toLowerCase()}`);
+  const bits = await pbkdf2(password, salt, AUTH_ITERATIONS, 256);
+  return b64(bits).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function deriveKek(password, saltB64) {
+  const bits = await pbkdf2(password, fromB64(saltB64), KEK_ITERATIONS, 256);
+  return crypto.subtle.importKey('raw', bits, { name: 'AES-GCM', length: 256 }, false, [
+    'encrypt',
+    'decrypt',
+  ]);
+}
+
+/** Encrypt the identity private key so it can be stored server-side. */
+export async function sealPrivateKey(privateKey, password) {
+  const keySalt = b64(crypto.getRandomValues(new Uint8Array(16)));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const kek = await deriveKek(password, keySalt);
+  const jwk = te.encode(JSON.stringify(await exportPrivateJwk(privateKey)));
+  const sealed = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, kek, jwk);
+  return { encPrivateKey: b64(sealed), keySalt, keyIv: b64(iv) };
+}
+
+/** Recover the identity private key from the server-held bundle. */
+export async function openPrivateKey({ encPrivateKey, keySalt, keyIv }, password) {
+  const kek = await deriveKek(password, keySalt);
+  const plain = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: fromB64(keyIv) },
+    kek,
+    fromB64(encPrivateKey),
+  );
+  return importPrivateJwk(JSON.parse(td.decode(plain)));
+}
+
+/* -------- identity cache for this browser -------- */
 
 const mem = { userId: null, privateKey: null, publicKeyB64: null };
 const convCache = new Map();
@@ -208,33 +270,57 @@ export function getCachedConversationKey(threadId) {
 }
 
 /**
- * Ensure identity keys exist on this device and public key is on the server.
- * No password — keys live in localStorage for this browser.
+ * Make the account's identity key available in this browser.
+ *
+ * The keypair belongs to the account, not the device: the private half is
+ * stored server-side sealed with a password-derived key, so signing in on any
+ * browser recovers the same identity and every existing thread decrypts.
+ *
+ * `password` is only available at sign-in. On a later page load the key is
+ * read from this browser's cache instead; if neither is available the caller
+ * gets a LOCKED error and should ask the user to sign in again.
  */
-export async function bootstrapIdentity({ userId, fetchPublicKey, uploadPublicKey }) {
+export class IdentityLockedError extends Error {
+  constructor() {
+    super('Chat identity is locked on this browser — sign in again to unlock.');
+    this.name = 'IdentityLockedError';
+    this.code = 'LOCKED';
+  }
+}
+
+export async function bootstrapIdentity({ userId, password, fetchBundle, uploadKeys }) {
   if (mem.userId === userId && mem.privateKey) {
     return { publicKey: mem.publicKeyB64 };
   }
 
+  // Already unlocked in this browser
+  const local = await loadDeviceKeys(userId);
+  if (local) {
+    mem.userId = userId;
+    mem.privateKey = local.privateKey;
+    mem.publicKeyB64 = local.publicKeyB64;
+    return { publicKey: local.publicKeyB64 };
+  }
+
+  if (!password) throw new IdentityLockedError();
+
+  const bundle = await fetchBundle();
   let privateKey;
   let publicKeyB64;
-  const local = await loadDeviceKeys(userId);
 
-  if (local) {
-    privateKey = local.privateKey;
-    publicKeyB64 = local.publicKeyB64;
+  if (bundle?.encPrivateKey && bundle?.keySalt && bundle?.keyIv) {
+    privateKey = await openPrivateKey(bundle, password);
+    publicKeyB64 = bundle.publicKey;
   } else {
+    // First sign-in since escrow existed: mint the account identity once.
     const pair = await generateIdentityKeys();
     privateKey = pair.privateKey;
     publicKeyB64 = await exportPublicKey(pair.publicKey);
-    await saveDeviceKeys(userId, privateKey, publicKeyB64);
+    const sealed = await sealPrivateKey(privateKey, password);
+    await uploadKeys({ publicKey: publicKeyB64, ...sealed });
   }
 
-  const remote = await fetchPublicKey();
-  if (remote?.publicKey !== publicKeyB64) {
-    await uploadPublicKey(publicKeyB64);
-  }
-
+  await saveDeviceKeys(userId, privateKey, publicKeyB64);
   mem.userId = userId;
   mem.privateKey = privateKey;
   mem.publicKeyB64 = publicKeyB64;

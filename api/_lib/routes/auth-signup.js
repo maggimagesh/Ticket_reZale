@@ -1,5 +1,5 @@
 import { getSupabase } from '../supabase.js';
-import { hashPassword, passwordMeetsRules } from '../password.js';
+import { hashPassword } from '../password.js';
 import { signToken } from '../token.js';
 import {
   allowMethods,
@@ -9,6 +9,13 @@ import {
   sendJson,
   validateUsernameFormat,
 } from '../http.js';
+
+/**
+ * The client sends a PBKDF2 verifier, not the password, so the server cannot
+ * judge password strength — that is enforced in the browser. All that can be
+ * checked here is that the value has the shape of a verifier.
+ */
+const AUTH_SECRET_RE = /^[A-Za-z0-9_-]{40,64}$/;
 
 export default async function route(req, res) {
   if (!allowMethods(req, res, ['POST'])) return;
@@ -21,8 +28,8 @@ export default async function route(req, res) {
 
     const formatError = validateUsernameFormat(username);
     if (formatError) return sendError(res, 400, formatError);
-    if (!passwordMeetsRules(password)) {
-      return sendError(res, 400, 'Password does not meet the required rules');
+    if (!AUTH_SECRET_RE.test(password)) {
+      return sendError(res, 400, 'Unsupported client — please refresh and try again');
     }
 
     const supabase = getSupabase();

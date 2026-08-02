@@ -1,9 +1,9 @@
-import { getAuthUser } from '../../_lib/auth-request.js';
-import { assertThreadAccess } from '../../_lib/chat-access.js';
-import { shapeThread, THREAD_SELECT } from '../../_lib/chat-thread.js';
-import { allowMethods, readJson, sendError, sendJson } from '../../_lib/http.js';
-import { broadcastListingChange } from '../../_lib/realtime.js';
-import { getSupabase } from '../../_lib/supabase.js';
+import { getAuthUser } from '../auth-request.js';
+import { assertThreadAccess } from '../chat-access.js';
+import { shapeThread, THREAD_SELECT } from '../chat-thread.js';
+import { allowMethods, readJson, sendError, sendJson } from '../http.js';
+import { broadcastListingChange } from '../realtime.js';
+import { getSupabase } from '../supabase.js';
 
 function threadIdFrom(req) {
   if (req.params?.id) return req.params.id;
@@ -23,7 +23,7 @@ function threadIdFrom(req) {
  *                       (sold only when remaining qty hits 0)
  *   { status: 'closed' } — close without sale
  */
-export default async function handler(req, res) {
+export default async function route(req, res) {
   const method = (req.method || '').toUpperCase();
   if (!allowMethods(req, res, ['GET', 'PATCH'])) return;
 

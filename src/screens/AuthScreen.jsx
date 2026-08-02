@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import * as api from '../services/api.js';
 import * as auth from '../services/authService.js';
 import { SegmentedControl } from '../components/SegmentedControl.jsx';
 import { TicketSwarm3D } from '../components/TicketSwarm3D.jsx';
@@ -78,6 +79,14 @@ export function AuthScreen({ wide, onAuthenticated }) {
     try {
       const call = isSignup ? auth.signup : auth.login;
       const session = await call({ username, password, remember });
+      // Sign-in is the only moment the password exists, so unlock the chat
+      // identity now. A failure here must not block getting into the app.
+      auth.saveSession(session, remember);
+      try {
+        await api.setupEncryptedChat(password);
+      } catch (keyErr) {
+        console.error('[chat identity]', keyErr);
+      }
       setPassword('');
       setConfirm('');
       await onAuthenticated(session, remember);

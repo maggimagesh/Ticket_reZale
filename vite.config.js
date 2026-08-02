@@ -6,7 +6,6 @@ const ROUTES = {
   '/api/theatres': () => import('./api/theatres.js'),
   '/api/movies': () => import('./api/movies.js'),
   '/api/chat/keys': () => import('./api/chat/keys.js'),
-  '/api/chat/threads': () => import('./api/chat/threads.js'),
   '/api/chat/cleanup': () => import('./api/chat/cleanup.js'),
   '/api/purchases': () => import('./api/purchases.js'),
 };
@@ -29,21 +28,13 @@ function matchDynamic(path) {
       params: { id: listing[1] },
     };
   }
-  const threadSub = path.match(/^\/api\/chat\/threads\/([^/]+)\/(.+?)\/?$/);
-  if (threadSub) {
-    const rest = threadSub[2].split('/');
+  const threads = path.match(/^\/api\/chat\/threads(?:\/(.*))?\/?$/);
+  if (threads) {
+    const segs = (threads[1] || '').split('/').filter(Boolean);
     return {
-      load: () => import('./api/chat/threads/[id]/[...rest].js'),
-      params: { id: threadSub[1] },
-      query: { id: threadSub[1], rest },
-    };
-  }
-
-  const thread = path.match(/^\/api\/chat\/threads\/([^/]+)\/?$/);
-  if (thread) {
-    return {
-      load: () => import('./api/chat/threads/[id].js'),
-      params: { id: thread[1] },
+      load: () => import('./api/chat/threads/[[...path]].js'),
+      params: { path: segs },
+      query: { path: segs },
     };
   }
   return null;

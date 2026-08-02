@@ -477,6 +477,14 @@ export function ChatScreen({ chat, wide, onBack }) {
           </div>
         </div>
 
+        {active?.messages?.length > 0 && active.messages.every((m) => m.sealed) && (
+          <div className="chat-policy" role="note">
+            This chat was encrypted on a different browser or device. Its
+            messages can&rsquo;t be read or replied to here — open it where you
+            started it, or begin a new conversation.
+          </div>
+        )}
+
         {active?.expiresAt && (
           <div className="chat-policy" role="note">
             Chats will be deleted after 48 hours
@@ -548,6 +556,7 @@ export function ChatScreen({ chat, wide, onBack }) {
             messages.map((m) => {
               const mine = m.from === 'me';
               const gone = m.deleted === 'all';
+              const sealed = !gone && m.sealed;
               const isImage = !gone && (m.kind === 'image' || m.hasImage);
               return (
                 <div key={m.id} className={'msg' + (mine ? ' msg--mine' : '')}>
@@ -556,11 +565,13 @@ export function ChatScreen({ chat, wide, onBack }) {
                       {peerInitials}
                     </div>
                   )}
-                  <div className={'bubble' + (gone ? ' bubble--gone' : '')}>
+                  <div className={'bubble' + (gone || sealed ? ' bubble--gone' : '')}>
                     {gone ? (
                       <div className="bubble__gone">
                         {mine ? 'You deleted this message' : 'This message was deleted'}
                       </div>
+                    ) : sealed && !isImage ? (
+                      <div className="bubble__gone">Encrypted for another browser</div>
                     ) : isImage && active?.id ? (
                       <ChatImage threadId={active.id} message={m} mine={mine} />
                     ) : (

@@ -6,6 +6,8 @@
  * "Remember me" is checked.
  * ===================================================================== */
 
+import { deriveAuthSecret } from '../lib/e2eCrypto.js';
+
 const API_BASE = '/api/auth';
 
 export const PASSWORD_RULES = [
@@ -44,12 +46,19 @@ export async function checkUsername(username) {
   return parseResponse(res);
 }
 
-/** POST /api/auth/signup */
+/**
+ * POST /api/auth/signup
+ *
+ * The raw password never leaves the browser. A PBKDF2 verifier is sent in its
+ * place, so the server cannot derive the key that seals the chat identity.
+ * Password strength is therefore enforced here, not server-side.
+ */
 export async function signup({ username, password, remember }) {
+  const authSecret = await deriveAuthSecret(username, password);
   const res = await fetch(`${API_BASE}/signup`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password, remember }),
+    body: JSON.stringify({ username, password: authSecret, remember }),
   });
   return parseResponse(res);
 }
@@ -58,10 +67,11 @@ export async function signup({ username, password, remember }) {
 export async function login({ username, password, remember }) {
   if (!username.trim() || !password) throw new Error('Enter your username and password');
 
+  const authSecret = await deriveAuthSecret(username, password);
   const res = await fetch(`${API_BASE}/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password, remember }),
+    body: JSON.stringify({ username, password: authSecret, remember }),
   });
   return parseResponse(res);
 }
