@@ -46,3 +46,4 @@ design/
 *.local
 .cache/
 .claude/
+.env*
