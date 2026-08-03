@@ -77,55 +77,6 @@ npx vercel          # preview
 npx vercel --prod   # production
 ```
 
-## Deploy the API on Zoho Catalyst (for Slate)
-
-The UI can be hosted on Catalyst Slate (`*.onslate.*`) while the API runs as a
-Catalyst Advanced I/O function. Both providers use the same source handlers in
-`api/`; the Catalyst adapter only routes requests to them.
-
-1. Deploy the tracked `tickets-api` Node 22 Advanced I/O function from this
-   repository with `catalyst deploy --only functions:tickets-api`. Its predeploy
-   step packages the shared `api/` handlers automatically.
-2. In the Catalyst console, set these environment variables on the
-   **tickets-api** function: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
-   `JWT_SECRET`, and `TMDB_API_KEY`. Add `CRON_SECRET` only if chat retention
-   is enabled.
-3. In Slate, add this **build-time** environment variable (replace the domain
-   with the function URL shown by Catalyst):
-
-```env
-VITE_API_BASE=https://YOUR_PROJECT.catalystserverless.com/server/tickets-api/api
-```
-
-   Slate then builds the UI against that API origin. The function accepts Slate
-   preview and production origins and handles CORS preflights, so login,
-   listings, purchases, chat, movies, theatres, and images all continue to use
-   the same API flow. Set `CORS_ALLOWED_ORIGINS` on the function only if you
-   also need a non-Slate custom frontend origin (comma-separated, or `*`).
-   To retain live listing-update notifications, also set the existing public
-   `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in Slate. Do not put
-   the Supabase service-role key, JWT secret, TMDB key, or cron secret in Slate.
-
-4. Build and deploy the frontend through Slate normally (`npm run build`, or
-   your existing Git-connected Slate deployment). Set the same `VITE_API_BASE`
-   in each Slate deployment environment, including previews if you use them.
-
-For a local function package, run:
-
-```bash
-npm run catalyst:prepare-api
-```
-
-If you place Catalyst API Gateway in front of the function, set
-`VITE_API_BASE` to that public API Gateway URL instead. Vercel continues to
-use `/api/*` automatically, with no Vercel environment or route changes.
-
-For example, with an API Gateway route at `/api`, use:
-
-```bash
-VITE_API_BASE=https://YOUR_PROJECT.catalystserverless.com/api npm run build
-```
-
 ## What's here
 
 | Path | |
@@ -140,8 +91,6 @@ VITE_API_BASE=https://YOUR_PROJECT.catalystserverless.com/api npm run build
 | `src/services/api.js` | **Single network boundary** — listings, chat, keys |
 | `src/services/authService.js` | Signup, login, username check → `/api/auth/*` |
 | `api/auth/` | Vercel serverless auth handlers (Supabase + JWT) |
-| `catalyst/` | Catalyst Advanced I/O adapter for the shared API handlers |
-| `scripts/prepare-catalyst-api.mjs` | Packages the shared API handlers for Catalyst deployment |
 | `api/chat/` | E2E chat keys, threads, ciphertext messages |
 | `api/listings.js` | GET/POST ticket listings |
 | `supabase/schema.sql` | `users` + `tickets` DDL |

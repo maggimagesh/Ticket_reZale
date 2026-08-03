@@ -7,9 +7,8 @@
  * ===================================================================== */
 
 import { deriveAuthSecret } from '../lib/e2eCrypto.js';
-import { AUTH_API_BASE } from './apiBase.js';
 
-const API_BASE = AUTH_API_BASE;
+const API_BASE = '/api/auth';
 
 export const PASSWORD_RULES = [
   { id: 'len', label: 'At least 8 characters', test: (v) => v.length >= 8 },

@@ -15,7 +15,6 @@ dist/
 
 # deployment
 .vercel
-catalyst/functions/tickets-api/api/
 
 # logs
 *.log
