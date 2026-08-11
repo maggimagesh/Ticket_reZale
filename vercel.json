@@ -1,7 +1,14 @@
 {
+  "redirects": [
+    {
+      "source": "/checkout",
+      "destination": "/checkout/",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
-      "source": "/((?!api/).*)",
+      "source": "/((?!api/|checkout/).*)",
       "destination": "/index.html"
     }
   ],
