@@ -647,9 +647,12 @@ input[type="text"]:focus-visible { outline: none; }
 .panel.is-busy .summary { opacity: 0; pointer-events: none; }
 .panel.is-busy .card-slot { pointer-events: none; }
 
+/* Drop the form column but leave the card column exactly where it was. The
+   slot is the FLIP reference: if the collapse recentred it, the card would
+   lurch sideways with it mid-flight and then slide back. Its resting spot is
+   invisible by now anyway — the card is out of it, positioned by transform. */
 .panel.is-collapsed .panel__grid {
   grid-template-columns: minmax(0, 340px);
-  justify-content: center;
 }
 .panel.is-collapsed .col--form,
 .panel.is-collapsed .summary { display: none; }
