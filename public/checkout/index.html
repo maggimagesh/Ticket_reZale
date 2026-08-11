@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Checkout — payment method</title>
+<meta name="description" content="A checkout payment-method component where the credit card visual is the live preview of the form." />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<main class="shell">
+
+  <header class="shell__head">
+    <p class="eyebrow">Tickets reZale</p>
+    <h1>Confirm your payment method</h1>
+    <p class="lede">Your card is the preview. Everything you type shows up on it.</p>
+  </header>
+
+  <!-- ─────────────────────────────  PANEL  ───────────────────────────── -->
+  <section class="panel" id="panel" aria-label="Payment">
+
+    <div class="panel__grid">
+
+      <!-- ── left column: card + order summary ── -->
+      <div class="col col--card">
+
+        <div class="card-slot" id="cardSlot">
+          <div class="card" id="card" data-brand="unknown">
+            <span class="glow" id="glow" aria-hidden="true"></span>
+
+            <div class="card__tilt" id="cardTilt">
+              <div class="card__inner" id="cardInner">
+
+                <!-- ── front ── -->
+                <div class="card__face card__face--front">
+                  <div class="card__weave" aria-hidden="true"></div>
+
+                  <div class="card__top">
+                    <div class="card__marks">
+                      <svg class="chip" viewBox="0 0 40 30" aria-hidden="true">
+                        <rect x=".75" y=".75" width="38.5" height="28.5" rx="5" class="chip__body"/>
+                        <path class="chip__trace" d="M13.5 1v9.5M26.5 1v9.5M13.5 29v-9.5M26.5 29v-9.5M1 10.5h12.5M39 10.5H26.5M1 19.5h12.5M39 19.5H26.5M13.5 10.5h13v9h-13z"/>
+                      </svg>
+                      <svg class="wave" viewBox="0 0 22 26" aria-hidden="true">
+                        <path d="M4 5a13 13 0 0 1 0 16M9.5 2a19 19 0 0 1 0 22M15 -1a25 25 0 0 1 0 28"/>
+                      </svg>
+                    </div>
+                    <p class="card__issuer">NORTHWIND</p>
+                  </div>
+
+                  <p class="pan" id="panOut" aria-hidden="true"></p>
+
+                  <div class="card__bottom">
+                    <div class="card__field card__field--name">
+                      <span class="card__label">Cardholder</span>
+                      <span class="card__value" id="nameOut">YOUR NAME</span>
+                    </div>
+                    <div class="card__field card__field--exp">
+                      <span class="card__label">Expires</span>
+                      <span class="card__value tnum" id="expOut">••/••</span>
+                    </div>
+                    <div class="brandmark brandmark--card" id="brandCard" aria-hidden="true"></div>
+                  </div>
+                </div>
+
+                <!-- ── back ── -->
+                <div class="card__face card__face--back">
+                  <div class="stripe" aria-hidden="true"></div>
+
+                  <div class="sigrow">
+                    <div class="sig" aria-hidden="true">
+                      <span class="sig__hatch"></span>
+                      <span class="sig__label">Authorised signature — not valid unless signed</span>
+                    </div>
+                    <div class="cvcbox"><span class="tnum" id="cvcOut"></span></div>
+                  </div>
+
+                  <p class="fineprint" aria-hidden="true">
+                    This card is issued by Northwind Financial pursuant to licence. Use is subject to the
+                    cardholder agreement. If found, return to any branch or call the number on file.
+                  </p>
+
+                  <div class="brandmark brandmark--back" id="brandBack" aria-hidden="true"></div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="summary" id="summary">
+          <h2 class="summary__title">Order summary</h2>
+          <dl class="summary__list">
+            <div><dt>2 × Front-row seats</dt><dd class="tnum">$1,180.00</dd></div>
+            <div><dt>Service fee</dt><dd class="tnum">$48.00</dd></div>
+            <div><dt>Transfer fee</dt><dd class="tnum">$20.00</dd></div>
+          </dl>
+          <p class="summary__total"><span>Total</span><span class="tnum" id="totalOut">$1,248.00</span></p>
+        </div>
+
+      </div>
+
+      <!-- ── right column: the form ── -->
+      <div class="col col--form" id="formCol">
+        <form class="form" id="payForm" novalidate autocomplete="on">
+
+          <div class="field">
+            <label for="ccName">Cardholder name</label>
+            <input id="ccName" name="ccName" type="text" autocomplete="cc-name"
+                   placeholder="A. Mercer" spellcheck="false" autocapitalize="words"
+                   aria-describedby="errName" />
+            <p class="err" id="errName" role="alert"></p>
+          </div>
+
+          <div class="field">
+            <label for="ccNumber">Card number</label>
+            <div class="control">
+              <input id="ccNumber" name="ccNumber" type="text" autocomplete="cc-number"
+                     inputmode="numeric" placeholder="4242 4242 4242 4242"
+                     spellcheck="false" autocorrect="off" maxlength="23"
+                     aria-describedby="errNumber" />
+              <span class="brandmark brandmark--field" id="brandField" aria-hidden="true"></span>
+            </div>
+            <p class="err" id="errNumber" role="alert"></p>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="ccExp">Expiry</label>
+              <input id="ccExp" name="ccExp" type="text" autocomplete="cc-exp"
+                     inputmode="numeric" placeholder="MM/YY" spellcheck="false"
+                     autocorrect="off" maxlength="5" aria-describedby="errExp" />
+              <p class="err" id="errExp" role="alert"></p>
+            </div>
+            <div class="field">
+              <label for="ccCvc">CVC</label>
+              <input id="ccCvc" name="ccCvc" type="text" autocomplete="cc-csc"
+                     inputmode="numeric" placeholder="&bull;&bull;&bull;" spellcheck="false"
+                     autocorrect="off" maxlength="4" aria-describedby="errCvc" />
+              <p class="err" id="errCvc" role="alert"></p>
+            </div>
+          </div>
+
+          <label class="check" for="saveCard">
+            <input type="checkbox" id="saveCard" name="saveCard" />
+            <span class="check__box" aria-hidden="true">
+              <svg viewBox="0 0 14 14"><path d="M2.5 7.2 5.6 10.3 11.5 4"/></svg>
+            </span>
+            <span class="check__text">Save this card for next time</span>
+          </label>
+
+          <button class="btn btn--primary" type="submit" id="payBtn">
+            Pay <span class="tnum" id="payTotal">$1,248.00</span>
+          </button>
+
+          <p class="assure">
+            <svg viewBox="0 0 16 16" aria-hidden="true" class="assure__ico">
+              <path d="M8 1.5 13.5 4v4.2c0 3.2-2.2 5.4-5.5 6.3-3.3-.9-5.5-3.1-5.5-6.3V4z"/>
+            </svg>
+            Encrypted end to end. Nothing is stored on this device.
+          </p>
+        </form>
+      </div>
+
+    </div>
+
+    <!-- ── authorising / result overlay ── -->
+    <div class="stage" id="stage">
+      <div class="stage__zone" id="stageZone"></div>
+      <div class="stage__status">
+
+        <span class="ind" id="ind" data-mode="spin" aria-hidden="true">
+          <svg viewBox="0 0 44 44">
+            <circle class="ind__track" cx="22" cy="22" r="17"/>
+            <circle class="ind__arc"   cx="22" cy="22" r="17"/>
+            <path class="ind__mark ind__mark--tick" d="M14 22.6 19.6 28.2 30.4 16.4"/>
+            <path class="ind__mark ind__mark--cross" d="M15.6 15.6 28.4 28.4M28.4 15.6 15.6 28.4"/>
+          </svg>
+        </span>
+
+        <p class="stage__head" id="stageHead">Authorising with your bank</p>
+        <p class="stage__sub tnum" id="stageSub"></p>
+        <p class="stage__reason" id="stageReason"></p>
+
+        <div class="stage__actions">
+          <button class="btn btn--ghost" type="button" id="againBtn" hidden>Run it again</button>
+          <button class="btn btn--ghost" type="button" id="retryBtn" hidden>Try another card</button>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ── test-card chips ── -->
+  <div class="chips">
+    <span class="chips__label" id="chipsLabel">Test cards</span>
+    <div class="chips__row" role="group" aria-labelledby="chipsLabel">
+      <button class="chip-btn" type="button" data-pan="4242424242424242">
+        <span class="chip-btn__dot chip-btn__dot--ok" aria-hidden="true"></span>
+        <span class="tnum">4242 4242 4242 4242</span>
+        <span class="chip-btn__tag">approves</span>
+      </button>
+      <button class="chip-btn" type="button" data-pan="4000000000000002">
+        <span class="chip-btn__dot chip-btn__dot--bad" aria-hidden="true"></span>
+        <span class="tnum">4000 0000 0000 0002</span>
+        <span class="chip-btn__tag">declines</span>
+      </button>
+    </div>
+  </div>
+
+  <p class="sr-only" id="live" role="status" aria-live="polite"></p>
+
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

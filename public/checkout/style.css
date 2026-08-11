@@ -1,0 +1,725 @@
+/* ============================================================
+   Checkout — payment method
+   The card is the form preview. Vanilla CSS, nothing external.
+   ============================================================ */
+
+:root {
+  --ink:        #101828;
+  --ink-2:      #475467;
+  --ink-3:      #8792a6;
+  --line:       #e3e8ef;
+  --field:      #f4f7fb;
+  --paper:      #ffffff;
+  --ground:     #e9eef6;
+
+  --blue:       #2f6df6;
+  --blue-deep:  #1b4fd6;
+  --green:      #1fb573;
+  --red:        #e0484d;
+
+  --r-lg: 26px;
+  --r-md: 14px;
+  --r-sm: 10px;
+
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas,
+          "Liberation Mono", monospace;
+
+  /* motion budget */
+  --e:          cubic-bezier(.2,.8,.2,1);
+  --t-flip:     600ms;
+  --t-move:     620ms;
+  --t-collapse: 240ms;
+  --t-halo:     420ms;
+  --t-morph:    300ms;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  padding: 48px 20px 72px;
+  font-family: var(--sans);
+  color: var(--ink);
+  background: var(--ground);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.tnum { font-variant-numeric: tabular-nums; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+}
+
+:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── shell ───────────────────────────────────────────────── */
+
+.shell { max-width: 960px; margin: 0 auto; }
+
+.shell__head { margin: 0 0 26px; padding: 0 4px; }
+
+.eyebrow {
+  margin: 0 0 8px;
+  font-size: 12px; font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--blue);
+}
+
+.shell__head h1 {
+  margin: 0 0 6px;
+  font-size: clamp(24px, 3.4vw, 30px);
+  font-weight: 600; letter-spacing: -.02em;
+}
+
+.lede { margin: 0; color: var(--ink-2); font-size: 15px; }
+
+/* ── panel ───────────────────────────────────────────────── */
+
+.panel {
+  position: relative;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 34px;
+  box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 18px 46px -28px rgba(16,24,40,.24);
+}
+
+/* The card column is deliberately narrower than the form column: it keeps the
+   slot small enough that the FLIP growth clamp has room to actually grow. */
+.panel__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 340px) minmax(0, 1fr);
+  gap: 44px;
+  align-items: start;
+}
+
+.col { min-width: 0; }
+
+/* ── card slot ────────────────────────────────────────────
+   NEVER transformed. It is the measuring reference for FLIP. */
+
+.card-slot {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1.586 / 1;
+  perspective: 1200px;    /* the card's own perspective does the 3D work */
+  z-index: 3;
+}
+
+/* The card is the 3D root for its own contents, and deliberately `flat`.
+   With preserve-3d here, the halo plate and the tilting faces would sit in
+   one 3D rendering context as two intersecting planes — the renderer then
+   slices the card along their intersection line the instant any tilt or
+   flip is applied. Flattening keeps the plate a separate plane, and the
+   card-local perspective keeps the vanishing point on the card even after
+   the FLIP move carries it far from the slot. */
+.card {
+  position: absolute;
+  inset: 0;
+  transform-style: flat;
+  perspective: 1200px;
+  transition: transform var(--t-move) var(--e);
+  will-change: transform;
+}
+
+/* ── halo: layered spread shadow on an opaque plate behind the
+   opaque faces. The card occludes its own light source, which is
+   what makes it read as emitted rather than painted. Every state
+   keeps identical geometry so only the colours interpolate.
+
+   The plate must not share a 3D rendering context with the tilting
+   faces or it intersects them — see the note on .card above. ── */
+
+.glow {
+  position: absolute;
+  inset: 4px;
+  border-radius: 18px;
+  background: #eef3fa;                 /* only glimpsed edge-on mid-flip */
+  transition: box-shadow var(--t-halo) ease;
+  box-shadow:
+    0 0 26px  4px rgba(47,109,246,.16),
+    0 0 62px 18px rgba(47,109,246,.09),
+    0 20px 40px -20px rgba(16,24,40,.45);
+}
+.glow.is-pending {
+  box-shadow:
+    0 0 26px  4px rgba(47,109,246,.42),
+    0 0 62px 18px rgba(47,109,246,.24),
+    0 20px 40px -20px rgba(16,24,40,.45);
+}
+.glow.is-ok {
+  box-shadow:
+    0 0 26px  4px rgba(31,181,115,.52),
+    0 0 62px 18px rgba(31,181,115,.28),
+    0 20px 40px -20px rgba(16,24,40,.45);
+}
+.glow.is-bad {
+  box-shadow:
+    0 0 26px  4px rgba(224,72,77,.52),
+    0 0 62px 18px rgba(224,72,77,.28),
+    0 20px 40px -20px rgba(16,24,40,.45);
+}
+
+/* ── tilt (pointer) — its own element, isolated from the flip ── */
+
+.card__tilt {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform 260ms var(--e);
+}
+
+.card__tilt.is-floating {
+  transform: none;
+  animation: float 6.5s ease-in-out infinite;
+  transition: none;
+}
+
+@keyframes float {
+  0%, 100% { transform: translate3d(0, -5px, 0) rotateX(1.4deg); }
+  50%      { transform: translate3d(0,  5px, 0) rotateX(-1.4deg); }
+}
+
+/* ── flip — its own element ── */
+
+.card__inner {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform var(--t-flip) var(--e);
+}
+.card__inner.is-flipped { transform: rotateY(180deg); }
+
+.card__face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: 18px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(255,255,255,.7);
+}
+
+.card__face--front {
+  padding: 22px 24px 20px;
+  background:
+    linear-gradient(133deg, #cfe0f9 0%, #e9f0fb 40%, #ffffff 70%, #dfe8f6 100%);
+  color: #16233c;
+}
+
+.card__face--back {
+  transform: rotateY(180deg);
+  padding: 0;
+  background:
+    linear-gradient(133deg, #e4ecf9 0%, #f6f9fd 46%, #ffffff 74%, #e6ecf6 100%);
+  color: #16233c;
+}
+
+/* faint diagonal guilloche */
+.card__weave {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    repeating-linear-gradient(52deg,
+      rgba(31,64,124,.055) 0 1px, transparent 1px 7px),
+    repeating-linear-gradient(-38deg,
+      rgba(31,64,124,.035) 0 1px, transparent 1px 11px);
+  mask-image: radial-gradient(120% 100% at 20% 0%, #000 30%, transparent 78%);
+  -webkit-mask-image: radial-gradient(120% 100% at 20% 0%, #000 30%, transparent 78%);
+}
+
+.card__top {
+  position: relative;
+  display: flex; align-items: flex-start; justify-content: space-between;
+}
+
+.card__marks { display: flex; align-items: center; gap: 12px; }
+
+.chip { width: 40px; height: 30px; }
+.chip__body {
+  fill: #cfd8e6;
+  stroke: rgba(255,255,255,.85);
+  stroke-width: 1.5;
+}
+.chip__trace { fill: none; stroke: #9aa8bf; stroke-width: 1.1; }
+
+.wave {
+  width: 17px; height: 21px;
+  fill: none; stroke: #93a3bd; stroke-width: 1.7;
+  stroke-linecap: round; opacity: .85;
+}
+
+.card__issuer {
+  margin: 2px 0 0;
+  font-size: 13px; font-weight: 700; letter-spacing: .16em;
+  color: #35507e;
+}
+
+/* ── the PAN: engraved, tabular ── */
+
+.pan {
+  position: relative;
+  margin: auto 0 0;
+  padding-bottom: 18px;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 19px;                       /* fallback where cqw is unsupported */
+  font-size: clamp(15px, 4.35cqw, 21px);
+  letter-spacing: .045em;
+  font-weight: 600;
+  color: #12213c;
+  text-shadow: 0 1px 0 rgba(255,255,255,.95);
+  white-space: nowrap;
+}
+
+.card-slot { container-type: inline-size; }
+
+.pan__grp + .pan__grp { margin-left: .62em; }
+.pan__dot {
+  color: #8fa0bd;
+  text-shadow: 0 1px 0 rgba(255,255,255,.9);
+  font-size: .78em;
+  vertical-align: .07em;
+}
+
+.card__bottom {
+  position: relative;
+  display: flex; align-items: flex-end; gap: 18px;
+}
+
+.card__field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.card__field--name { flex: 1 1 auto; min-width: 0; }
+.card__field--exp  { flex: 0 0 auto; }
+
+.card__label {
+  font-size: 7.5px; font-weight: 600; letter-spacing: .14em;
+  text-transform: uppercase; color: #7b8aa6;
+}
+
+.card__value {
+  font-size: 12.5px; font-weight: 600; letter-spacing: .07em;
+  text-transform: uppercase; color: #1b2b4a;
+  text-shadow: 0 1px 0 rgba(255,255,255,.9);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ── back face ── */
+
+.stripe {
+  height: 20%;
+  min-height: 38px;
+  margin-top: 22px;
+  background: linear-gradient(180deg, #2b3345, #171d29 55%, #232b3a);
+}
+
+.sigrow {
+  display: flex; align-items: stretch; gap: 10px;
+  padding: 16px 18px 0;
+}
+
+.sig {
+  position: relative; flex: 1 1 auto; min-width: 0;
+  height: 30px; border-radius: 3px; overflow: hidden;
+  background: #fbfcfe;
+  border: 1px solid rgba(31,64,124,.16);
+  display: flex; align-items: center;
+}
+.sig__hatch {
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(-45deg,
+    rgba(47,109,246,.16) 0 2px, transparent 2px 6px);
+}
+.sig__label {
+  position: relative;
+  padding: 0 8px;
+  font-size: 6px; letter-spacing: .08em; text-transform: uppercase;
+  color: #6d7b93;
+}
+
+.cvcbox {
+  flex: 0 0 auto;
+  min-width: 62px;
+  padding: 0 10px;
+  height: 30px; border-radius: 3px;
+  background: #fff;
+  border: 1px solid rgba(31,64,124,.16);
+  display: flex; align-items: center; justify-content: flex-end;
+  font-family: var(--mono); font-weight: 600; font-size: 13px;
+  letter-spacing: .12em; color: #16233c;
+}
+
+.fineprint {
+  margin: 12px 18px 0;
+  font-size: 6.6px; line-height: 1.55; color: #7d8aa1;
+  max-width: 74%;
+}
+
+/* ── brand marks ── */
+
+.brandmark {
+  display: inline-flex; align-items: center; justify-content: flex-end;
+  opacity: 0;
+  transition: opacity 260ms ease;
+}
+.brandmark.is-on { opacity: 1; }
+.brandmark svg { display: block; }
+
+/* In the flex flow, not absolute, so it can never land on the expiry. */
+.brandmark--card {
+  flex: 0 0 auto;
+  height: 24px;
+  margin-bottom: -2px;
+}
+.brandmark--card svg { height: 24px; width: auto; }
+
+.brandmark--back {
+  position: absolute; right: 16px; bottom: 12px; height: 17px;
+}
+.brandmark--back svg { height: 17px; width: auto; opacity: .85; }
+
+.brandmark--field {
+  position: absolute; right: 12px; top: 50%;
+  transform: translateY(-50%);
+  height: 20px; pointer-events: none;
+}
+.brandmark--field svg { height: 20px; width: auto; }
+
+/* ── order summary ── */
+
+.summary {
+  margin-top: 26px;
+  transition: opacity var(--t-collapse) ease;
+}
+.summary__title {
+  margin: 0 0 12px;
+  font-size: 11px; font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+.summary__list { margin: 0; }
+.summary__list > div {
+  display: flex; justify-content: space-between; gap: 16px;
+  padding: 7px 0;
+  font-size: 14px;
+}
+.summary__list dt { color: var(--ink-2); }
+.summary__list dd { margin: 0; color: var(--ink); font-weight: 500; }
+
+.summary__total {
+  display: flex; justify-content: space-between;
+  margin: 10px 0 0; padding-top: 13px;
+  border-top: 1px solid var(--line);
+  font-size: 16px; font-weight: 600;
+}
+
+/* ── form ────────────────────────────────────────────────── */
+
+.col--form {
+  transition:
+    opacity var(--t-collapse) ease,
+    transform var(--t-collapse) var(--e);
+  transform-origin: 50% 40%;
+}
+
+.form { display: flex; flex-direction: column; gap: 15px; }
+
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+label {
+  font-size: 13px; font-weight: 500; color: var(--ink-2);
+}
+
+.control { position: relative; }
+
+input[type="text"] {
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  background: var(--field);
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  transition: border-color 160ms ease, background-color 160ms ease,
+              box-shadow 160ms ease;
+}
+#ccNumber { padding-right: 56px; letter-spacing: .02em; }
+#ccNumber, #ccExp, #ccCvc { font-family: var(--mono); font-size: 14.5px; }
+
+input[type="text"]::placeholder { color: #a9b4c6; }
+
+input[type="text"]:hover { background: #eff3f9; }
+
+input[type="text"]:focus {
+  outline: none;
+  background: var(--paper);
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(47,109,246,.16);
+}
+
+input[type="text"]:focus-visible { outline: none; }
+
+.field.has-error input[type="text"] {
+  border-color: var(--red);
+  background: #fef5f5;
+}
+.field.has-error input[type="text"]:focus {
+  box-shadow: 0 0 0 3px rgba(224,72,77,.15);
+}
+
+.err {
+  margin: 0; min-height: 0;
+  font-size: 12.5px; color: var(--red);
+  display: none;
+}
+.field.has-error .err { display: block; }
+
+/* checkbox */
+
+.check {
+  display: flex; align-items: center; gap: 10px;
+  margin: 2px 0 4px;
+  cursor: pointer;
+  font-size: 14px; color: var(--ink-2);
+  user-select: none;
+}
+.check input { position: absolute; opacity: 0; width: 0; height: 0; }
+.check__box {
+  flex: 0 0 auto;
+  width: 20px; height: 20px;
+  border-radius: 6px;
+  border: 1.5px solid #ccd5e2;
+  background: var(--paper);
+  display: grid; place-items: center;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+.check__box svg { width: 13px; height: 13px; fill: none;
+  stroke: #fff; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+  opacity: 0; transform: scale(.7); transition: opacity 140ms ease, transform 140ms var(--e); }
+.check input:checked + .check__box { background: var(--blue); border-color: var(--blue); }
+.check input:checked + .check__box svg { opacity: 1; transform: scale(1); }
+.check input:focus-visible + .check__box { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+/* buttons */
+
+.btn {
+  font: inherit; font-weight: 600;
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease,
+              border-color 160ms ease, transform 120ms var(--e);
+}
+.btn:active { transform: translateY(1px); }
+
+.btn--primary {
+  height: 50px;
+  background: var(--blue);
+  color: #fff;
+  font-size: 15px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn--primary:hover { background: var(--blue-deep); }
+
+.btn--ghost {
+  height: 42px; padding: 0 18px;
+  background: var(--paper);
+  border-color: var(--line);
+  color: var(--ink);
+  font-size: 14px;
+}
+.btn--ghost:hover { background: #f6f8fc; border-color: #cfd8e6; }
+
+.assure {
+  display: flex; align-items: center; gap: 7px;
+  margin: 2px 0 0;
+  font-size: 12.5px; color: var(--ink-3);
+}
+.assure__ico { width: 14px; height: 14px; fill: #b3bdcd; flex: 0 0 auto; }
+
+/* ── stage (authorising / result) ─────────────────────────── */
+
+/* Reserve enough panel height that the grown card and the status block
+   never collide, whichever result line is showing. */
+.panel.is-busy { min-height: 600px; }
+
+.stage {
+  position: absolute;
+  inset: 34px;
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  z-index: 2;
+  pointer-events: none;
+}
+.panel.is-busy .stage { display: flex; }
+
+/* The landing zone is sized from the grown card, so the card always has
+   the same clearance above the status block no matter how much it grew. */
+.stage__zone { flex: 0 0 auto; height: var(--zone-h, 280px); }
+
+.stage__status {
+  flex: 0 0 auto;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding-top: 14px;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 300ms ease 220ms;
+}
+.panel.is-busy .stage__status { opacity: 1; }
+
+.stage__head {
+  margin: 4px 0 0;
+  font-size: 16px; font-weight: 600; letter-spacing: -.01em;
+}
+.stage__sub {
+  margin: 0;
+  font-size: 13.5px; color: var(--ink-2);
+}
+.stage__reason {
+  margin: 0; max-width: 42ch;
+  font-size: 13px; color: var(--ink-3);
+}
+.stage__reason:empty { display: none; }
+
+.stage__actions { margin-top: 10px; pointer-events: auto; }
+.stage__actions button[hidden] { display: none; }
+
+/* indicator: spinner → check / cross */
+
+.ind { display: block; width: 40px; height: 40px; }
+.ind svg { width: 100%; height: 100%; overflow: visible; }
+
+.ind__track {
+  fill: none; stroke: #e3e9f2; stroke-width: 3.4;
+}
+.ind__arc {
+  fill: none; stroke: var(--blue); stroke-width: 3.4; stroke-linecap: round;
+  stroke-dasharray: 30 200;
+  transform-origin: 50% 50%;
+  animation: spin 950ms linear infinite;
+  opacity: 1;
+  transition: opacity var(--t-morph) ease;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.ind__mark {
+  fill: none; stroke-width: 3.4;
+  stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 44; stroke-dashoffset: 44;
+  opacity: 0;
+  transition: stroke-dashoffset var(--t-morph) var(--e),
+              opacity 120ms ease;
+}
+.ind__mark--tick  { stroke: var(--green); }
+.ind__mark--cross { stroke: var(--red); }
+
+.ind[data-mode="ok"]  .ind__arc,
+.ind[data-mode="bad"] .ind__arc { opacity: 0; animation-play-state: paused; }
+
+.ind[data-mode="ok"]  .ind__track { stroke: rgba(31,181,115,.22); }
+.ind[data-mode="bad"] .ind__track { stroke: rgba(224,72,77,.22); }
+
+.ind[data-mode="ok"]  .ind__mark--tick,
+.ind[data-mode="bad"] .ind__mark--cross { opacity: 1; stroke-dashoffset: 0; }
+
+/* busy-state collapse of the idle layout, in two beats: the form fades and
+   shrinks first, then the layout actually closes up once it is invisible. */
+
+.panel.is-busy .col--form {
+  opacity: 0;
+  transform: scale(.965);
+  pointer-events: none;
+}
+.panel.is-busy .summary { opacity: 0; pointer-events: none; }
+.panel.is-busy .card-slot { pointer-events: none; }
+
+.panel.is-collapsed .panel__grid {
+  grid-template-columns: minmax(0, 340px);
+  justify-content: center;
+}
+.panel.is-collapsed .col--form,
+.panel.is-collapsed .summary { display: none; }
+
+/* ── test-card chips ──────────────────────────────────────── */
+
+.chips { margin-top: 20px; padding: 0 4px; }
+.chips__label {
+  display: block; margin-bottom: 9px;
+  font-size: 11px; font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+.chips__row { display: flex; flex-wrap: wrap; gap: 10px; }
+
+.chip-btn {
+  display: inline-flex; align-items: center; gap: 9px;
+  height: 38px; padding: 0 14px;
+  font: inherit; font-size: 13px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+.chip-btn:hover { border-color: #c8d3e4; background: #fbfcfe; }
+.chip-btn__dot { width: 7px; height: 7px; border-radius: 50%; }
+.chip-btn__dot--ok  { background: var(--green); }
+.chip-btn__dot--bad { background: var(--red); }
+.chip-btn__tag { color: var(--ink-3); font-size: 12px; }
+
+/* ── responsive: stack below ~820px ───────────────────────── */
+
+@media (max-width: 820px) {
+  body { padding: 32px 14px 56px; }
+
+  .panel { padding: 22px; border-radius: 22px; }
+  .panel.is-busy { min-height: 520px; }
+  .stage { inset: 22px; }
+
+  .panel__grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 26px;
+  }
+
+  /* card above the form */
+  .col--card { order: 1; }
+  .col--form { order: 2; }
+
+  .card-slot { max-width: 380px; margin: 0 auto; }
+  .summary { max-width: 380px; margin-left: auto; margin-right: auto; }
+
+  .field-row { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 420px) {
+  .field-row { grid-template-columns: 1fr; }
+}
+
+/* ── reduced motion: every state still reachable, just instant ── */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+  .card__tilt.is-floating { animation: none; transform: none; }
+  .ind__arc { animation: none; stroke-dasharray: 30 200; }
+  .stage__status { opacity: 1; }
+}
