@@ -3,7 +3,12 @@
    The card is the form preview. Vanilla CSS, nothing external.
    ============================================================ */
 
+/* The light palette is defined in full here; the dark blocks below redefine
+   only what changes. Three states are supported: an explicit choice stamps
+   data-theme on the root, and the default "system" setting stamps nothing. */
 :root {
+  color-scheme: light;
+
   --ink:        #101828;
   --ink-2:      #475467;
   --ink-3:      #8792a6;
@@ -16,6 +21,14 @@
   --blue-deep:  #1b4fd6;
   --green:      #1fb573;
   --red:        #e0484d;
+
+  --field-hover:  #eff3f9;
+  --soft:         #f6f8fc;
+  --edge:         #ccd5e2;
+  --danger-bg:    #fef5f5;
+  --placeholder:  #a9b4c6;
+
+  --shadow-panel: 0 1px 2px rgba(16,24,40,.04), 0 18px 46px -28px rgba(16,24,40,.24);
 
   --r-lg: 26px;
   --r-md: 14px;
@@ -33,6 +46,62 @@
   --t-collapse: 240ms;
   --t-halo:     420ms;
   --t-morph:    300ms;
+}
+
+/* Only the tokens that differ are restated, so the two dark blocks stay in
+   step with each other and nothing has its sole definition inside a query. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --ink:      #e9eef8;
+    --ink-2:    #9dafc8;
+    --ink-3:    #6d7f99;
+    --line:     #263141;
+    --field:    #161d29;
+    --paper:    #111a25;
+    --ground:   #080d14;
+
+    --blue:     #4d84ff;
+    --blue-deep:#356dee;
+    --green:    #2ecb84;
+    --red:      #ff6b70;
+
+
+    --field-hover: #1c2533;
+    --soft:        #18212e;
+    --edge:        #35435c;
+    --danger-bg:   #2c1519;
+    --placeholder: #5d6c83;
+
+    --shadow-panel: 0 1px 2px rgba(0,0,0,.5), 0 24px 60px -30px rgba(0,0,0,.85);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --ink:      #e9eef8;
+  --ink-2:    #9dafc8;
+  --ink-3:    #6d7f99;
+  --line:     #263141;
+  --field:    #161d29;
+  --paper:    #111a25;
+  --ground:   #080d14;
+
+  --blue:     #4d84ff;
+  --blue-deep:#356dee;
+  --green:    #2ecb84;
+  --red:      #ff6b70;
+
+
+  --field-hover: #1c2533;
+  --soft:        #18212e;
+  --edge:        #35435c;
+  --danger-bg:   #2c1519;
+  --placeholder: #5d6c83;
+
+  --shadow-panel: 0 1px 2px rgba(0,0,0,.5), 0 24px 60px -30px rgba(0,0,0,.85);
 }
 
 * { box-sizing: border-box; }
@@ -67,7 +136,38 @@ body {
 
 .shell { max-width: 960px; margin: 0 auto; }
 
-.shell__head { margin: 0 0 26px; padding: 0 4px; }
+.shell__head {
+  margin: 0 0 26px; padding: 0 4px;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 20px;
+}
+.shell__headings { min-width: 0; }
+
+/* Theme switch. It flips the session only — nothing is written to storage. */
+.themer {
+  flex: 0 0 auto;
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 38px; padding: 0 14px;
+  font: inherit; font-size: 13px; font-weight: 500;
+  color: var(--ink-2);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+.themer:hover { color: var(--ink); border-color: var(--ink-3); }
+.themer svg {
+  width: 15px; height: 15px;
+  fill: none; stroke: currentColor; stroke-width: 1.6;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.themer__moon { display: none; }
+:root[data-theme="dark"] .themer__sun { display: none; }
+:root[data-theme="dark"] .themer__moon { display: block; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .themer__sun  { display: none; }
+  :root:not([data-theme="light"]) .themer__moon { display: block; }
+}
 
 .eyebrow {
   margin: 0 0 8px;
@@ -91,7 +191,7 @@ body {
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
   padding: 34px;
-  box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 18px 46px -28px rgba(16,24,40,.24);
+  box-shadow: var(--shadow-panel);
 }
 
 /* The card column is deliberately narrower than the form column: it keeps the
@@ -144,7 +244,7 @@ body {
   position: absolute;
   inset: 4px;
   border-radius: 18px;
-  background: #eef3fa;                 /* only glimpsed edge-on mid-flip */
+  background: #14171c;                 /* only glimpsed edge-on mid-flip */
   transition: box-shadow var(--t-halo) ease;
   box-shadow:
     0 0 26px  4px rgba(47,109,246,.16),
@@ -209,34 +309,42 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  border: 1px solid rgba(255,255,255,.7);
+  border: 1px solid rgba(255,255,255,.09);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.10),
+              inset 0 -1px 0 rgba(0,0,0,.55);
 }
 
+/* Anodised black metal: a graphite gradient with a cool sheen off the top
+   corner. The card stays black in both themes — a black card is a black card. */
 .card__face--front {
   padding: 22px 24px 20px;
   background:
-    linear-gradient(133deg, #cfe0f9 0%, #e9f0fb 40%, #ffffff 70%, #dfe8f6 100%);
-  color: #16233c;
+    radial-gradient(125% 95% at 86% 4%, rgba(150,178,214,.26) 0%, rgba(150,178,214,0) 58%),
+    linear-gradient(116deg,
+      #2b2f37 0%, #1e222a 26%, #131519 52%, #0b0c0f 74%, #191d24 100%);
+  color: #e9edf4;
 }
 
 .card__face--back {
   transform: rotateY(180deg);
   padding: 0;
   background:
-    linear-gradient(133deg, #e4ecf9 0%, #f6f9fd 46%, #ffffff 74%, #e6ecf6 100%);
-  color: #16233c;
+    radial-gradient(120% 90% at 88% 6%, rgba(150,178,214,.2) 0%, rgba(150,178,214,0) 55%),
+    linear-gradient(116deg,
+      #262a31 0%, #1b1e25 30%, #111317 60%, #1a1e25 100%);
+  color: #e9edf4;
 }
 
-/* faint diagonal guilloche */
+/* Guilloche: fine engine-turning, catching the light where the sheen falls. */
 .card__weave {
   position: absolute; inset: 0; pointer-events: none;
   background:
-    repeating-linear-gradient(52deg,
-      rgba(31,64,124,.055) 0 1px, transparent 1px 7px),
-    repeating-linear-gradient(-38deg,
-      rgba(31,64,124,.035) 0 1px, transparent 1px 11px);
-  mask-image: radial-gradient(120% 100% at 20% 0%, #000 30%, transparent 78%);
-  -webkit-mask-image: radial-gradient(120% 100% at 20% 0%, #000 30%, transparent 78%);
+    repeating-linear-gradient(58deg,
+      rgba(255,255,255,.085) 0 1.4px, rgba(255,255,255,0) 1.4px 9px),
+    repeating-linear-gradient(-46deg,
+      rgba(255,255,255,.035) 0 1px, rgba(255,255,255,0) 1px 15px);
+  mask-image: linear-gradient(112deg, transparent 22%, #000 78%);
+  -webkit-mask-image: linear-gradient(112deg, transparent 22%, #000 78%);
 }
 
 .card__top {
@@ -248,22 +356,29 @@ body {
 
 .chip { width: 40px; height: 30px; }
 .chip__body {
-  fill: #cfd8e6;
-  stroke: rgba(255,255,255,.85);
-  stroke-width: 1.5;
+  fill: #c8a462;
+  stroke: rgba(255,236,196,.55);
+  stroke-width: 1.2;
 }
-.chip__trace { fill: none; stroke: #9aa8bf; stroke-width: 1.1; }
+.chip__trace { fill: none; stroke: rgba(60,44,16,.7); stroke-width: 1.1; }
 
 .wave {
   width: 17px; height: 21px;
-  fill: none; stroke: #93a3bd; stroke-width: 1.7;
-  stroke-linecap: round; opacity: .85;
+  fill: none; stroke: #93a1b8; stroke-width: 1.7;
+  stroke-linecap: round; opacity: .8;
 }
 
 .card__issuer {
   margin: 2px 0 0;
+  text-align: right;
   font-size: 13px; font-weight: 700; letter-spacing: .16em;
-  color: #35507e;
+  line-height: 1.15;
+  color: #eef2f9;
+}
+.card__issuer span {
+  display: block;
+  font-size: 8px; font-weight: 600; letter-spacing: .28em;
+  color: #9aa7bd;
 }
 
 /* ── the PAN: engraved, tabular ── */
@@ -274,21 +389,24 @@ body {
   padding-bottom: 18px;
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
-  font-size: 19px;                       /* fallback where cqw is unsupported */
-  font-size: clamp(15px, 4.35cqw, 21px);
-  letter-spacing: .045em;
-  font-weight: 600;
-  color: #12213c;
-  text-shadow: 0 1px 0 rgba(255,255,255,.95);
+  font-size: 22px;                       /* fallback where cqw is unsupported */
+  font-size: clamp(16px, 5.1cqw, 25px);
+  letter-spacing: .02em;
+  font-weight: 700;
+  color: #f2f5fa;
+  text-shadow: 0 -1px 0 rgba(255,255,255,.22), 0 2px 3px rgba(0,0,0,.85);
   white-space: nowrap;
 }
+
+/* Each slot is a stable element so only a newly filled one animates. */
+.pan__ch { display: inline-block; }
 
 .card-slot { container-type: inline-size; }
 
 .pan__grp + .pan__grp { margin-left: .62em; }
 .pan__dot {
-  color: #8fa0bd;
-  text-shadow: 0 1px 0 rgba(255,255,255,.9);
+  color: #6b7a90;
+  text-shadow: 0 1px 2px rgba(0,0,0,.7);
   font-size: .78em;
   vertical-align: .07em;
 }
@@ -299,18 +417,18 @@ body {
 }
 
 .card__field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.card__field--name { flex: 1 1 auto; min-width: 0; }
+.card__field--name { flex: 0 1 auto; min-width: 0; max-width: 52%; }
 .card__field--exp  { flex: 0 0 auto; }
 
 .card__label {
   font-size: 7.5px; font-weight: 600; letter-spacing: .14em;
-  text-transform: uppercase; color: #7b8aa6;
+  text-transform: uppercase; color: #8593a9;
 }
 
 .card__value {
   font-size: 12.5px; font-weight: 600; letter-spacing: .07em;
-  text-transform: uppercase; color: #1b2b4a;
-  text-shadow: 0 1px 0 rgba(255,255,255,.9);
+  text-transform: uppercase; color: #e4eaf3;
+  text-shadow: 0 -1px 0 rgba(255,255,255,.16), 0 2px 3px rgba(0,0,0,.8);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
@@ -320,7 +438,7 @@ body {
   height: 20%;
   min-height: 38px;
   margin-top: 22px;
-  background: linear-gradient(180deg, #2b3345, #171d29 55%, #232b3a);
+  background: linear-gradient(180deg, #101216, #000 55%, #14171c);
 }
 
 .sigrow {
@@ -331,20 +449,20 @@ body {
 .sig {
   position: relative; flex: 1 1 auto; min-width: 0;
   height: 30px; border-radius: 3px; overflow: hidden;
-  background: #fbfcfe;
-  border: 1px solid rgba(31,64,124,.16);
+  background: #e7eaf0;
+  border: 1px solid rgba(0,0,0,.35);
   display: flex; align-items: center;
 }
 .sig__hatch {
   position: absolute; inset: 0;
   background: repeating-linear-gradient(-45deg,
-    rgba(47,109,246,.16) 0 2px, transparent 2px 6px);
+    rgba(30,45,75,.2) 0 2px, transparent 2px 6px);
 }
 .sig__label {
   position: relative;
   padding: 0 8px;
   font-size: 6px; letter-spacing: .08em; text-transform: uppercase;
-  color: #6d7b93;
+  color: #5d6b82;
 }
 
 .cvcbox {
@@ -353,7 +471,7 @@ body {
   padding: 0 10px;
   height: 30px; border-radius: 3px;
   background: #fff;
-  border: 1px solid rgba(31,64,124,.16);
+  border: 1px solid rgba(0,0,0,.35);
   display: flex; align-items: center; justify-content: flex-end;
   font-family: var(--mono); font-weight: 600; font-size: 13px;
   letter-spacing: .12em; color: #16233c;
@@ -361,25 +479,36 @@ body {
 
 .fineprint {
   margin: 12px 18px 0;
-  font-size: 6.6px; line-height: 1.55; color: #7d8aa1;
+  font-size: 6.6px; line-height: 1.55; color: #7c879b;
   max-width: 74%;
 }
 
 /* ── brand marks ── */
 
+/* The entrance lives on the <svg>, not the wrapper — the field variant needs
+   its wrapper transform for centring, and the two would overwrite each other. */
 .brandmark {
   display: inline-flex; align-items: center; justify-content: flex-end;
-  opacity: 0;
-  transition: opacity 260ms ease;
 }
-.brandmark.is-on { opacity: 1; }
-.brandmark svg { display: block; }
+.brandmark svg {
+  display: block;
+  opacity: 0;
+  transform: scale(.6) rotate(-12deg);
+  transform-origin: 100% 50%;
+  transition: opacity 240ms ease,
+              transform 460ms cubic-bezier(.2, 1.35, .35, 1);
+}
+.brandmark.is-on svg { opacity: 1; transform: none; }
 
 /* In the flex flow, not absolute, so it can never land on the expiry. */
+.brandmark--card, .brandmark--back { color: #eef2f8; }
+.brandmark--field { color: var(--ink); }
+
 .brandmark--card {
   flex: 0 0 auto;
   height: 24px;
   margin-bottom: -2px;
+  margin-left: auto;
 }
 .brandmark--card svg { height: 24px; width: auto; }
 
@@ -459,9 +588,9 @@ input[type="text"] {
 #ccNumber { padding-right: 56px; letter-spacing: .02em; }
 #ccNumber, #ccExp, #ccCvc { font-family: var(--mono); font-size: 14.5px; }
 
-input[type="text"]::placeholder { color: #a9b4c6; }
+input[type="text"]::placeholder { color: var(--placeholder); }
 
-input[type="text"]:hover { background: #eff3f9; }
+input[type="text"]:hover { background: var(--field-hover); }
 
 input[type="text"]:focus {
   outline: none;
@@ -474,7 +603,7 @@ input[type="text"]:focus-visible { outline: none; }
 
 .field.has-error input[type="text"] {
   border-color: var(--red);
-  background: #fef5f5;
+  background: var(--danger-bg);
 }
 .field.has-error input[type="text"]:focus {
   box-shadow: 0 0 0 3px rgba(224,72,77,.15);
@@ -501,7 +630,7 @@ input[type="text"]:focus-visible { outline: none; }
   flex: 0 0 auto;
   width: 20px; height: 20px;
   border-radius: 6px;
-  border: 1.5px solid #ccd5e2;
+  border: 1.5px solid var(--edge);
   background: var(--paper);
   display: grid; place-items: center;
   transition: background-color 150ms ease, border-color 150ms ease;
@@ -541,14 +670,14 @@ input[type="text"]:focus-visible { outline: none; }
   color: var(--ink);
   font-size: 14px;
 }
-.btn--ghost:hover { background: #f6f8fc; border-color: #cfd8e6; }
+.btn--ghost:hover { background: var(--soft); border-color: var(--edge); }
 
 .assure {
   display: flex; align-items: center; gap: 7px;
   margin: 2px 0 0;
   font-size: 12.5px; color: var(--ink-3);
 }
-.assure__ico { width: 14px; height: 14px; fill: #b3bdcd; flex: 0 0 auto; }
+.assure__ico { width: 14px; height: 14px; fill: var(--ink-3); flex: 0 0 auto; }
 
 /* ── stage (authorising / result) ─────────────────────────── */
 
@@ -604,7 +733,7 @@ input[type="text"]:focus-visible { outline: none; }
 .ind svg { width: 100%; height: 100%; overflow: visible; }
 
 .ind__track {
-  fill: none; stroke: #e3e9f2; stroke-width: 3.4;
+  fill: none; stroke: var(--line); stroke-width: 3.4;
 }
 .ind__arc {
   fill: none; stroke: var(--blue); stroke-width: 3.4; stroke-linecap: round;
@@ -678,7 +807,7 @@ input[type="text"]:focus-visible { outline: none; }
   cursor: pointer;
   transition: border-color 150ms ease, background-color 150ms ease;
 }
-.chip-btn:hover { border-color: #c8d3e4; background: #fbfcfe; }
+.chip-btn:hover { border-color: var(--edge); background: var(--soft); }
 .chip-btn__dot { width: 7px; height: 7px; border-radius: 50%; }
 .chip-btn__dot--ok  { background: var(--green); }
 .chip-btn__dot--bad { background: var(--red); }
@@ -714,6 +843,129 @@ input[type="text"]:focus-visible { outline: none; }
 
 /* ── reduced motion: every state still reachable, just instant ── */
 
+/* ══════════════════════════════════════════════════════════
+   Card motion
+   Every layer below is decoration on top of the opaque faces, so
+   none of it participates in the flip's depth sorting.
+   ══════════════════════════════════════════════════════════ */
+
+/* ── specular: a soft highlight that tracks the pointer ── */
+
+.card__spec {
+  position: absolute; inset: 0; pointer-events: none;
+  border-radius: inherit;
+  background: radial-gradient(40% 52% at var(--mx, 50%) var(--my, 40%),
+    rgba(255,255,255,.72), rgba(255,255,255,0) 66%);
+  opacity: 0;
+  transition: opacity 340ms ease;
+}
+.card-slot:hover .card__spec { opacity: 1; }
+
+/* ── sheen: a bright band raked across the face ── */
+
+.card__sheen {
+  position: absolute; inset: 0; pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(104deg,
+    rgba(255,255,255,0)   42%,
+    rgba(255,255,255,.78) 50%,
+    rgba(255,255,255,0)   58%);
+  background-size: 260% 100%;
+  background-position: 150% 0;
+  opacity: 0;
+}
+@keyframes sheenSweep {
+  0%   { opacity: 0; background-position: 150% 0; }
+  12%  { opacity: 1; }
+  88%  { opacity: 1; }
+  100% { opacity: 0; background-position: -50% 0; }
+}
+.card__sheen.is-sweeping { animation: sheenSweep 1s cubic-bezier(.35,.65,.35,1); }
+.card__sheen.is-looping  { animation: sheenSweep 2.6s cubic-bezier(.5,0,.5,1) infinite; }
+
+/* ── parallax: layers drift at different rates under the tilt ── */
+
+.card__weave  { transform: translate3d(calc(var(--px, 0) * -5px), calc(var(--py, 0) * -3px), 0); }
+.card__top    { transform: translate3d(calc(var(--px, 0) *  7px), calc(var(--py, 0) *  4px), 0); }
+.pan          { transform: translate3d(calc(var(--px, 0) * 11px), calc(var(--py, 0) *  6px), 0); }
+.card__bottom { transform: translate3d(calc(var(--px, 0) *  6px), calc(var(--py, 0) *  4px), 0); }
+
+/* Transform only — the printed values themselves still update instantly. */
+.card__weave, .card__top, .pan, .card__bottom {
+  transition: transform 260ms cubic-bezier(.2, .8, .2, 1);
+}
+
+/* ── a typed digit lands in its slot ── */
+
+@keyframes panSet {
+  0%   { transform: translateY(-.42em) scale(.6);  opacity: 0; }
+  60%  { transform: translateY(.03em)  scale(1.1); opacity: 1; }
+  100% { transform: none;                          opacity: 1; }
+}
+.pan__ch.is-set  { animation: panSet 360ms cubic-bezier(.2,.9,.25,1); }
+.cvcbox .is-set  { animation: panSet 300ms cubic-bezier(.2,.9,.25,1); }
+.cvcbox span     { display: inline-block; }
+.cvcbox .cvc__dot { color: #9aa8bf; font-size: .8em; vertical-align: .08em; }
+
+/* ── the card turning over: it pulls back as it swings ── */
+
+@keyframes flipDip {
+  0%   { transform: translateZ(0)      scale(1); }
+  45%  { transform: translateZ(-70px)  scale(.94); }
+  100% { transform: translateZ(0)      scale(1); }
+}
+.card__tilt.is-dipping { animation: flipDip 600ms cubic-bezier(.2,.8,.2,1); }
+
+/* ── arrival: the card unwinds out of a 3D turn as it reaches centre ── */
+
+@keyframes cardArrive {
+  0%   { transform: rotateY(-36deg) rotateX(7deg) translateZ(-90px); }
+  100% { transform: none; }
+}
+.card__tilt.is-arriving { animation: cardArrive 620ms cubic-bezier(.2,.8,.2,1); }
+
+/* ── result gestures ── */
+
+@keyframes cardSettle {
+  0%   { transform: scale(1); }
+  38%  { transform: scale(1.04) translateZ(24px); }
+  100% { transform: scale(1); }
+}
+.card__tilt.is-settling { animation: cardSettle 560ms cubic-bezier(.2,.8,.2,1); }
+
+@keyframes cardShake {
+  0%, 100% { transform: translate3d(0,0,0) rotate(0); }
+  14% { transform: translate3d(-13px,0,0) rotate(-1.3deg); }
+  29% { transform: translate3d( 11px,0,0) rotate( 1.1deg); }
+  44% { transform: translate3d( -7px,0,0) rotate(-.7deg); }
+  60% { transform: translate3d(  5px,0,0) rotate( .45deg); }
+  78% { transform: translate3d( -2px,0,0) rotate(-.2deg); }
+}
+.card__tilt.is-shaking { animation: cardShake 640ms cubic-bezier(.36,.07,.19,.97); }
+
+/* ── the halo breathes while waiting, blooms once on the verdict ── */
+
+@keyframes haloBreathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.045); }
+}
+.glow.is-breathing { animation: haloBreathe 2s ease-in-out infinite; }
+
+@keyframes haloBloom {
+  0%   { transform: scale(1); }
+  42%  { transform: scale(1.09); }
+  100% { transform: scale(1); }
+}
+.glow.is-blooming { animation: haloBloom 640ms cubic-bezier(.2,.8,.2,1); }
+
+/* ── the card rises into its slot on first paint ── */
+
+@keyframes cardEnter {
+  0%   { opacity: 0; transform: translateY(22px) rotateX(11deg) scale(.95); }
+  100% { opacity: 1; transform: none; }
+}
+.card__tilt.is-entering { animation: cardEnter 780ms cubic-bezier(.2,.8,.2,1); }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: .001ms !important;
@@ -725,4 +977,8 @@ input[type="text"]:focus-visible { outline: none; }
   .card__tilt.is-floating { animation: none; transform: none; }
   .ind__arc { animation: none; stroke-dasharray: 30 200; }
   .stage__status { opacity: 1; }
+  /* every added flourish collapses too — the flow stays fully legible */
+  .card__sheen, .card__spec { animation: none; opacity: 0; }
+  .card__weave, .card__top, .pan, .card__bottom { transform: none; }
+  .brandmark svg { transform: none; }
 }
