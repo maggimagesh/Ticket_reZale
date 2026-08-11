@@ -42,6 +42,7 @@
   var expOut  = $('#expOut');
   var cvcOut  = $('#cvcOut');
 
+  var sheen      = $('#cardSheen');
   var brandCard  = $('#brandCard');
   var brandBack  = $('#brandBack');
   var brandField = $('#brandField');
@@ -97,17 +98,21 @@
   /* Brand marks. Drawn inline so the component makes no requests.
      Font properties are written longhand — the `font` shorthand inside an
      SVG style attribute drops the style and weight in Chromium. */
-  var SANS = 'ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif';
+  /* Single quotes only: this stack goes into a style="…" attribute, and a
+     double-quoted family name closes the attribute early — which silently
+     dropped every declaration after it, `fill` included. */
+  var SANS = "ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif";
 
   function type(size, weight, italic, extra) {
-    return 'font-family:' + SANS + ';font-size:' + size + 'px;font-weight:' + weight +
+    return 'fill:' + (extra && /fill:/.test(extra) ? '' : 'currentColor') +
+           ';font-family:' + SANS + ';font-size:' + size + 'px;font-weight:' + weight +
            ';font-style:' + (italic ? 'italic' : 'normal') + ';' + (extra || '');
   }
 
   var MARKS = {
     visa:
       '<svg viewBox="0 0 62 22"><text x="0" y="17" style="' +
-      type(17, 800, true, 'letter-spacing:.01em;fill:#1a3a8f') + '">VISA</text></svg>',
+      type(17, 800, true, 'letter-spacing:.01em;fill:currentColor') + '">VISA</text></svg>',
     mastercard:
       '<svg viewBox="0 0 44 22">' +
       '<circle cx="15" cy="11" r="9.4" fill="#e2574c"/>' +
@@ -121,7 +126,7 @@
     discover:
       '<svg viewBox="0 0 80 22">' +
       '<text x="0" y="16" style="' +
-      type(13, 700, false, 'letter-spacing:-.01em;fill:#2b3a52') + '">DISCOVER</text>' +
+      type(13, 700, false, 'letter-spacing:-.01em;fill:currentColor') + '">DISCOVER</text>' +
       '<circle cx="74" cy="12" r="5" fill="#f08a24"/></svg>',
     jcb:
       '<svg viewBox="0 0 48 22">' +
@@ -133,7 +138,7 @@
       '<circle cx="11" cy="11" r="10" fill="#2b6bb5"/>' +
       '<circle cx="11" cy="11" r="5" fill="#fff"/>' +
       '<text x="25" y="15" style="' +
-      type(10, 700, false, 'letter-spacing:.06em;fill:#2b3a52') + '">DINERS</text></svg>'
+      type(10, 700, false, 'letter-spacing:.06em;fill:currentColor') + '">DINERS</text></svg>'
   };
 
   /* ── PAN grouping / rendering ─────────────────────────── */
@@ -156,19 +161,51 @@
     return out.join(' ');
   }
 
-  /* Empty positions render as small dots so the card never looks broken. */
+  /* Empty positions render as small dots so the card never looks broken.
+     Slots are stable elements rebuilt only when the grouping itself changes,
+     so a keystroke animates the one digit that landed rather than all of them. */
+  var panShape = '';
+  var panWasValid = false;
+
   function renderPan(digits, brand) {
     var g = groupsFor(brand, digits.length);
-    var html = '', i = 0, k, j, ch;
-    for (k = 0; k < g.length; k++) {
-      html += '<span class="pan__grp">';
-      for (j = 0; j < g[k]; j++) {
-        ch = digits.charAt(i++);
-        html += ch ? ch : '<span class="pan__dot">&bull;</span>';
+    var shape = g.join('-');
+
+    if (shape !== panShape) {
+      panShape = shape;
+      var html = '', k, j;
+      for (k = 0; k < g.length; k++) {
+        html += '<span class="pan__grp">';
+        for (j = 0; j < g[k]; j++) html += '<span class="pan__ch pan__dot">&bull;</span>';
+        html += '</span>';
       }
-      html += '</span>';
+      panOut.innerHTML = html;
     }
-    panOut.innerHTML = html;
+
+    var cells = panOut.querySelectorAll('.pan__ch');
+    for (var i = 0; i < cells.length; i++) {
+      setCell(cells[i], digits.charAt(i), 'pan__dot');
+    }
+  }
+
+  /* Fill or empty one character slot, animating only a fresh arrival. */
+  function setCell(cell, ch, dotClass) {
+    var wasEmpty = cell.classList.contains(dotClass);
+    if (ch) {
+      if (wasEmpty || cell.textContent !== ch) {
+        cell.textContent = ch;
+        cell.classList.remove(dotClass);
+        if (wasEmpty && !reduced()) {
+          cell.classList.remove('is-set');
+          void cell.offsetWidth;                 // restart the animation
+          cell.classList.add('is-set');
+        }
+      }
+    } else if (!wasEmpty) {
+      cell.textContent = '•';
+      cell.classList.add(dotClass);
+      cell.classList.remove('is-set');
+    }
   }
 
   function luhn(d) {
@@ -234,6 +271,7 @@
     numEl.setAttribute('maxlength', String(next.max + groupsFor(next, next.max).length - 1));
     cvcEl.setAttribute('maxlength', String(Math.max.apply(null, next.cvc)));
     cvcEl.setAttribute('placeholder', next.cvc[0] === 4 ? '••••' : '•••');
+    renderCvc(cvcEl.value.replace(/\D+/g, ''));
   }
 
   /* ── field → card sync (instant, no transition) ───────── */
@@ -278,6 +316,11 @@
     setCaret(numEl, caretAfterDigit(formatted, idx));
 
     renderPan(digits, next);
+
+    var nowValid = !validateNumber();
+    if (nowValid && !panWasValid) sheenSweep();     /* "card recognised" */
+    panWasValid = nowValid;
+
     if (fieldOf(numEl).classList.contains('has-error')) revalidate(numEl);
     if (fieldOf(cvcEl).classList.contains('has-error')) revalidate(cvcEl);
   }
@@ -319,6 +362,22 @@
 
   /* ── CVC input — mirrored to the card, held nowhere else ─ */
 
+  var cvcShape = 0;
+
+  function renderCvc(digits) {
+    var n = brand.cvc[0];
+    if (cvcShape !== n) {
+      cvcShape = n;
+      var html = '', k;
+      for (k = 0; k < n; k++) html += '<span class="cvc__ch cvc__dot">&bull;</span>';
+      cvcOut.innerHTML = html;
+    }
+    var cells = cvcOut.querySelectorAll('.cvc__ch');
+    for (var i = 0; i < cells.length; i++) {
+      setCell(cells[i], digits.charAt(i), 'cvc__dot');
+    }
+  }
+
   function onCvcInput() {
     var digits = cvcEl.value.replace(/\D+/g, '')
       .slice(0, Math.max.apply(null, brand.cvc));
@@ -327,37 +386,95 @@
       cvcEl.value = digits;
       setCaret(cvcEl, Math.min(caret, digits.length));
     }
-    cvcOut.textContent = digits;
+    renderCvc(digits);
     if (fieldOf(cvcEl).classList.contains('has-error')) revalidate(cvcEl);
   }
 
-  /* Reading it is fine; keeping it is not. */
+  /* Reading it is fine; keeping it is not. The slots fall back to dots. */
   function wipeCvc() {
     cvcEl.value = '';
-    cvcOut.textContent = '';
+    renderCvc('');
   }
 
   /* ── flip ─────────────────────────────────────────────── */
 
+  /* ── card effects ──────────────────────────────────────
+     One gesture owns .card__tilt at a time; the helper clears the
+     others so two keyframe sets can never fight over the element. */
+
+  var TILT_FX = ['is-entering', 'is-dipping', 'is-arriving',
+                 'is-shaking', 'is-settling', 'is-floating'];
+  var tiltTimer = null;
+
+  function tiltFx(name, ms, then) {
+    if (tiltTimer) { window.clearTimeout(tiltTimer); tiltTimer = null; }
+    TILT_FX.forEach(function (c) { tilt.classList.remove(c); });
+    if (!name || reduced()) { if (then) then(); return; }
+    void tilt.offsetWidth;                      // restart cleanly
+    tilt.classList.add(name);
+    if (ms) {
+      tiltTimer = window.setTimeout(function () {
+        tiltTimer = null;
+        tilt.classList.remove(name);
+        if (then) then();
+      }, ms);
+    }
+  }
+
+  function sheenSweep() {
+    if (reduced()) return;
+    sheen.classList.remove('is-sweeping', 'is-looping');
+    void sheen.offsetWidth;
+    sheen.classList.add('is-sweeping');
+  }
+
+  function sheenLoop(on) {
+    sheen.classList.remove('is-sweeping', 'is-looping');
+    if (on && !reduced()) {
+      void sheen.offsetWidth;
+      sheen.classList.add('is-looping');
+    }
+  }
+
+  function glowFx(name) {
+    glow.classList.remove('is-breathing', 'is-blooming');
+    if (name && !reduced()) {
+      void glow.offsetWidth;
+      glow.classList.add(name);
+    }
+  }
+
   function flip(on) {
+    var was = inner.classList.contains('is-flipped');
     inner.classList.toggle('is-flipped', !!on);
+    if (was !== !!on) tiltFx('is-dipping', 600);   // it pulls back as it swings
   }
 
   cvcEl.addEventListener('focus', function () { if (phase === 'idle') flip(true); });
   cvcEl.addEventListener('blur',  function () { flip(false); });
 
-  /* ── pointer tilt ─────────────────────────────────────── */
+  /* ── pointer tilt, with parallax and a tracking specular ── */
 
   slot.addEventListener('pointermove', function (e) {
     if (phase !== 'idle' || reduced() || e.pointerType === 'touch') return;
     var r = slot.getBoundingClientRect();
-    var px = (e.clientX - r.left) / r.width - 0.5;
-    var py = (e.clientY - r.top) / r.height - 0.5;
-    tilt.style.transform = 'rotateY(' + (px * 9).toFixed(2) + 'deg) rotateX(' +
-                           (-py * 7).toFixed(2) + 'deg)';
+    var u = (e.clientX - r.left) / r.width;
+    var v = (e.clientY - r.top) / r.height;
+    var px = u - 0.5, py = v - 0.5;
+
+    tilt.style.transform = 'rotateY(' + (px * 14).toFixed(2) + 'deg) rotateX(' +
+                           (-py * 11).toFixed(2) + 'deg)';
+    card.style.setProperty('--px', (px * 2).toFixed(3));
+    card.style.setProperty('--py', (py * 2).toFixed(3));
+    card.style.setProperty('--mx', (u * 100).toFixed(1) + '%');
+    card.style.setProperty('--my', (v * 100).toFixed(1) + '%');
   });
 
-  slot.addEventListener('pointerleave', function () { tilt.style.transform = ''; });
+  slot.addEventListener('pointerleave', function () {
+    tilt.style.transform = '';
+    card.style.setProperty('--px', '0');
+    card.style.setProperty('--py', '0');
+  });
 
   /* ── FLIP: slot → centre of the panel ─────────────────────
      Measured off the slot, which is never transformed. A tilted or
@@ -553,7 +670,13 @@
     flip(false);
 
     tilt.style.transform = '';
-    tilt.classList.add('is-floating');
+    card.style.setProperty('--px', '0');
+    card.style.setProperty('--py', '0');
+
+    /* Unwind out of a 3D turn on the way in, then settle into a slow drift. */
+    tiltFx('is-arriving', 620, function () { tiltFx('is-floating'); });
+    sheenLoop(true);
+    glowFx('is-breathing');
 
     halo('pending');
     indicator('spin');
@@ -577,6 +700,9 @@
     panel.dataset.phase = phase;
 
     halo('ok');
+    glowFx('is-blooming');
+    tiltFx('is-settling', 560);
+    sheenSweep();
     indicator('ok');
     stageHead.textContent = 'Paid ' + money(TOTAL_CENTS);
     stageSub.textContent = 'Receipt on its way to you';
@@ -595,6 +721,9 @@
     panel.dataset.phase = phase;
 
     halo('bad');
+    glowFx(null);
+    sheenLoop(false);
+    tiltFx('is-shaking', 640);
     indicator('bad');
     stageHead.textContent = 'Card declined';
     stageSub.textContent = summary;
@@ -622,8 +751,12 @@
     panel.dataset.phase = phase;
 
     panel.classList.remove('is-busy', 'is-collapsed');
-    tilt.classList.remove('is-floating');
+    tiltFx(null);
+    sheenLoop(false);
+    glowFx(null);
     tilt.style.transform = '';
+    card.style.setProperty('--px', '0');
+    card.style.setProperty('--py', '0');
     card.style.transform = '';          // travels back to the slot
     flip(false);
     halo(null);                          // red/green fades back to blue, no residue
@@ -662,6 +795,44 @@
 
   againBtn.addEventListener('click', function () { toIdle({ clearAll: true, focus: 'name' }); });
   retryBtn.addEventListener('click', function () { toIdle({ focus: 'number' }); });
+
+  /* ── theme ─────────────────────────────────────────────
+     Follows the OS until the user overrides it, then holds that
+     choice for the session. Nothing is persisted — no storage. */
+
+  var themeBtn = $('#themeBtn');
+  var themeLabel = $('#themeLabel');
+  var darkMQ = window.matchMedia('(prefers-color-scheme: dark)');
+  var themeChoice = null;                 // null = follow the system
+
+  function isDark() {
+    return themeChoice === null ? darkMQ.matches : themeChoice === 'dark';
+  }
+
+  function paintTheme() {
+    var dark = isDark();
+    if (themeChoice === null) {
+      document.documentElement.removeAttribute('data-theme');
+    } else {
+      document.documentElement.setAttribute('data-theme', themeChoice);
+    }
+    themeBtn.setAttribute('aria-pressed', dark ? 'true' : 'false');
+    themeBtn.setAttribute('aria-label',
+      'Switch to ' + (dark ? 'light' : 'dark') + ' theme');
+    themeLabel.textContent = dark ? 'Dark' : 'Light';
+  }
+
+  themeBtn.addEventListener('click', function () {
+    themeChoice = isDark() ? 'light' : 'dark';
+    paintTheme();
+    announce(themeLabel.textContent + ' theme');
+  });
+
+  if (darkMQ.addEventListener) {
+    darkMQ.addEventListener('change', function () { if (themeChoice === null) paintTheme(); });
+  }
+
+  paintTheme();
 
   /* ── test-card chips ──────────────────────────────────── */
 
@@ -717,7 +888,9 @@
   $('#totalOut').textContent = money(TOTAL_CENTS);
   applyBrand(UNKNOWN, true);
   renderPan('', UNKNOWN);
+  renderCvc('');
   syncName();
   syncExpCard();
   panel.dataset.phase = 'idle';
+  tiltFx('is-entering', 800);
 })();
