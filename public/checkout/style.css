@@ -307,8 +307,7 @@ body {
   -webkit-backface-visibility: hidden;
   border-radius: 18px;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  display: block;
   border: 1px solid rgba(255,255,255,.09);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.10),
               inset 0 -1px 0 rgba(0,0,0,.55);
@@ -319,20 +318,39 @@ body {
 .card__face--front {
   padding: 22px 24px 20px;
   background:
-    radial-gradient(125% 95% at 86% 4%, rgba(150,178,214,.26) 0%, rgba(150,178,214,0) 58%),
-    linear-gradient(116deg,
-      #2b2f37 0%, #1e222a 26%, #131519 52%, #0b0c0f 74%, #191d24 100%);
+    repeating-linear-gradient(97deg,
+      rgba(255,255,255,.018) 0 1px, rgba(0,0,0,0) 1px 3px),
+    radial-gradient(115% 88% at 84% 2%, rgba(163,190,224,.16) 0%, rgba(163,190,224,0) 52%),
+    linear-gradient(118deg,
+      #262a32 0%, #171a23 22%, #0a0c11 46%, #030406 68%, #10131a 92%, #1b1e26 100%);
   color: #e9edf4;
 }
 
 .card__face--back {
   transform: rotateY(180deg);
   padding: 0;
+  display: block;
   background:
     radial-gradient(120% 90% at 88% 6%, rgba(150,178,214,.2) 0%, rgba(150,178,214,0) 55%),
     linear-gradient(116deg,
       #262a31 0%, #1b1e25 30%, #111317 60%, #1a1e25 100%);
   color: #e9edf4;
+}
+
+/* Engraved frame, drawn to the card's own box so it scales with it. */
+.card__frame {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  pointer-events: none;
+}
+
+/* House emblem, centred like a struck medallion. */
+.card__seal {
+  position: absolute;
+  left: 50%; top: 45%;
+  width: 18%; height: auto;
+  transform: translate(-50%, -50%);
+  opacity: .92;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.85));
 }
 
 /* Guilloche: fine engine-turning, catching the light where the sheen falls. */
@@ -347,12 +365,11 @@ body {
   -webkit-mask-image: linear-gradient(112deg, transparent 22%, #000 78%);
 }
 
-.card__top {
-  position: relative;
-  display: flex; align-items: flex-start; justify-content: space-between;
+.card__marks {
+  position: absolute;
+  left: 26px; top: 56px;
+  display: flex; align-items: center; gap: 11px;
 }
-
-.card__marks { display: flex; align-items: center; gap: 12px; }
 
 .chip { width: 40px; height: 30px; }
 .chip__body {
@@ -368,51 +385,85 @@ body {
   stroke-linecap: round; opacity: .8;
 }
 
+/* Silver strike: a vertical gradient clipped to the glyphs, with the emboss
+   carried by the shadow underneath. Used for every engraved line on the card. */
+.ag {
+  background-image: linear-gradient(180deg,
+    #ffffff 0%, #e2e8f2 38%, #97a2b4 54%, #cfd7e4 72%, #ffffff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
 .card__issuer {
-  margin: 2px 0 0;
-  text-align: right;
-  font-size: 13px; font-weight: 700; letter-spacing: .16em;
-  line-height: 1.15;
-  color: #eef2f9;
+  position: absolute;
+  left: 0; right: 0; top: 18px;
+  margin: 0;
+  text-align: center;
+  font-size: 15px; font-weight: 800; letter-spacing: .3em;
+  text-indent: .3em;                       /* balance the trailing letterspace */
+  line-height: 1.1;
+  background-image: linear-gradient(180deg,
+    #ffffff 0%, #e2e8f2 38%, #97a2b4 54%, #cfd7e4 72%, #ffffff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 2px 3px rgba(0,0,0,.9);
 }
 .card__issuer span {
   display: block;
-  font-size: 8px; font-weight: 600; letter-spacing: .28em;
-  color: #9aa7bd;
+  margin-top: 3px;
+  font-size: 7.5px; font-weight: 600; letter-spacing: .42em;
+  text-indent: .42em;
+  color: #93a0b6;
+  -webkit-text-fill-color: #93a0b6;
 }
 
 /* ── the PAN: engraved, tabular ── */
 
 .pan {
-  position: relative;
-  margin: auto 0 0;
-  padding-bottom: 18px;
+  position: absolute;
+  left: 26px; right: 26px; bottom: 62px;
+  margin: 0;
+  padding: 0;
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
   font-size: 22px;                       /* fallback where cqw is unsupported */
   font-size: clamp(16px, 5.1cqw, 25px);
   letter-spacing: .02em;
   font-weight: 700;
-  color: #f2f5fa;
-  text-shadow: 0 -1px 0 rgba(255,255,255,.22), 0 2px 3px rgba(0,0,0,.85);
+  color: transparent;
+  text-shadow: 0 2px 3px rgba(0,0,0,.9);
   white-space: nowrap;
 }
 
-/* Each slot is a stable element so only a newly filled one animates. */
-.pan__ch { display: inline-block; }
+/* Each slot is a stable element so only a newly filled one animates. The
+   silver is clipped per glyph rather than across the whole line: a slot that
+   animates is composited on its own, and a shared clip would break there. */
+.pan__ch {
+  display: inline-block;
+  background-image: linear-gradient(180deg,
+    #ffffff 0%, #e4eaf3 36%, #96a1b3 54%, #d2d9e6 72%, #ffffff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
 
 .card-slot { container-type: inline-size; }
 
 .pan__grp + .pan__grp { margin-left: .62em; }
 .pan__dot {
-  color: #6b7a90;
+  background-image: none;
+  color: #5f6c80;
+  -webkit-text-fill-color: #5f6c80;
   text-shadow: 0 1px 2px rgba(0,0,0,.7);
-  font-size: .78em;
-  vertical-align: .07em;
+  font-size: .74em;
+  vertical-align: .09em;
 }
 
 .card__bottom {
-  position: relative;
+  position: absolute;
+  left: 26px; right: 26px; bottom: 26px;
   display: flex; align-items: flex-end; gap: 18px;
 }
 
@@ -427,8 +478,13 @@ body {
 
 .card__value {
   font-size: 12.5px; font-weight: 600; letter-spacing: .07em;
-  text-transform: uppercase; color: #e4eaf3;
-  text-shadow: 0 -1px 0 rgba(255,255,255,.16), 0 2px 3px rgba(0,0,0,.8);
+  text-transform: uppercase;
+  background-image: linear-gradient(180deg,
+    #ffffff 0%, #dfe6f0 44%, #9aa5b7 58%, #eef3fa 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 1px 2px rgba(0,0,0,.85);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
