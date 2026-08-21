@@ -238,6 +238,106 @@ export function ReadTicks({ read }) {
 }
 
 /** Torn-ticket line art used by the empty states — fixed box, never stretched. */
+/* The five locks a password can buy, drawn on one 96×96 grid. All five stay
+   mounted so the swap can cross-fade; only the matching tier is shown. */
+const LOCK_TIER_IDS = ['none', 'paperclip', 'padlock', 'deadbolt', 'vault'];
+
+export function LockArt({ tier = 'none', size = 92 }) {
+  return (
+    <svg className="lockart" width={size} height={size} viewBox="0 0 96 96" aria-hidden="true">
+      <defs>
+        <linearGradient id="lockAg" x1=".2" y1="0" x2=".8" y2="1">
+          <stop offset="0" stopColor="#fdfdfe" />
+          <stop offset=".42" stopColor="#c6cedb" />
+          <stop offset=".56" stopColor="#798395" />
+          <stop offset="1" stopColor="#e7edf6" />
+        </linearGradient>
+        <linearGradient id="lockAgDim" x1=".2" y1="0" x2=".8" y2="1">
+          <stop offset="0" stopColor="#aeb6c4" />
+          <stop offset=".55" stopColor="#68717f" />
+          <stop offset="1" stopColor="#9aa3b2" />
+        </linearGradient>
+      </defs>
+
+      {LOCK_TIER_IDS.map((id) => (
+        <g key={id} className={'lockart__g' + (id === tier ? ' is-on' : '')}>
+          {id === 'none' && (
+            <>
+              <rect x="16" y="10" width="64" height="78" rx="4" fill="url(#lockAgDim)" />
+              <rect x="22" y="16" width="52" height="66" rx="2" fill="#0a0c10" />
+              <path d="M22 16 46 25v48l-24 9z" fill="url(#lockAg)" />
+              <circle cx="41" cy="50" r="2" fill="#5b6474" />
+            </>
+          )}
+
+          {id === 'paperclip' && (
+            <g
+              fill="none"
+              stroke="url(#lockAg)"
+              strokeWidth="5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M31 72V37a13 13 0 0 1 26 0v33a8 8 0 0 1-16 0V43" />
+              <path d="M57 45l11-9" />
+            </g>
+          )}
+
+          {id === 'padlock' && (
+            <>
+              <path
+                d="M33 46V35a15 15 0 0 1 30 0v11"
+                fill="none"
+                stroke="url(#lockAg)"
+                strokeWidth="7"
+                strokeLinecap="round"
+              />
+              <rect x="24" y="44" width="48" height="40" rx="7" fill="url(#lockAg)" />
+              <circle cx="48" cy="60" r="5.4" fill="#20242c" />
+              <path d="M45.6 62h4.8l-1.2 10h-2.4z" fill="#20242c" />
+            </>
+          )}
+
+          {id === 'deadbolt' && (
+            <>
+              <rect x="14" y="20" width="40" height="56" rx="5" fill="url(#lockAgDim)" />
+              <rect x="58" y="20" width="24" height="56" rx="5" fill="url(#lockAgDim)" />
+              <circle cx="34" cy="48" r="13" fill="url(#lockAg)" />
+              <rect x="30.5" y="45.5" width="7" height="5" rx="2.5" fill="#20242c" />
+              <path d="M32.6 50.5h2.8l-.7 7h-1.4z" fill="#20242c" />
+              <rect x="46" y="43" width="28" height="10" rx="4" fill="url(#lockAg)" />
+              <rect x="55" y="43" width="3" height="10" fill="#20242c" opacity=".45" />
+            </>
+          )}
+
+          {id === 'vault' && (
+            <>
+              <circle cx="48" cy="48" r="35" fill="url(#lockAgDim)" />
+              <circle cx="48" cy="48" r="28" fill="url(#lockAg)" />
+              <circle cx="48" cy="48" r="20" fill="none" stroke="#20242c" strokeWidth="1.4" opacity=".5" />
+              <g fill="url(#lockAg)">
+                <rect x="44.5" y="4" width="7" height="14" rx="3.5" />
+                <rect x="44.5" y="78" width="7" height="14" rx="3.5" />
+                <rect x="4" y="44.5" width="14" height="7" rx="3.5" />
+                <rect x="78" y="44.5" width="14" height="7" rx="3.5" />
+                <rect x="15" y="15" width="7" height="14" rx="3.5" transform="rotate(-45 18.5 22)" />
+                <rect x="74" y="67" width="7" height="14" rx="3.5" transform="rotate(-45 77.5 74)" />
+                <rect x="74" y="15" width="7" height="14" rx="3.5" transform="rotate(45 77.5 22)" />
+                <rect x="15" y="67" width="7" height="14" rx="3.5" transform="rotate(45 18.5 74)" />
+              </g>
+              <g stroke="#20242c" strokeWidth="4" strokeLinecap="round" opacity=".55">
+                <path d="M48 34v28M34 48h28M38.5 38.5l19 19M57.5 38.5l-19 19" />
+              </g>
+              <circle cx="48" cy="48" r="7" fill="url(#lockAgDim)" />
+              <circle cx="48" cy="48" r="2.6" fill="#20242c" />
+            </>
+          )}
+        </g>
+      ))}
+    </svg>
+  );
+}
+
 export function TicketArt({ withUnderline = true }) {
   const viewBox = withUnderline ? '0 0 64 56' : '0 0 64 44';
 
