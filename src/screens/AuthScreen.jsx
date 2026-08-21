@@ -10,20 +10,14 @@ import {
   Cross,
   Eye,
   EyeOff,
+  LockArt,
   Spinner,
   TicketMark,
 } from '../components/icons.jsx';
 
 const USERNAME_DEBOUNCE = 550;
 
-/** Meter copy, colour and fill keyed by how many password rules are met. */
-const STRENGTH = [
-  { label: 'Too short', ink: 'var(--faint)', width: '0%' },
-  { label: 'Weak', ink: 'var(--bad)', width: '25%' },
-  { label: 'Fair', ink: 'var(--warn)', width: '55%' },
-  { label: 'Good', ink: 'var(--warn)', width: '78%' },
-  { label: 'Strong', ink: 'var(--ok)', width: '100%' },
-];
+const METER_BARS = [0, 1, 2, 3];
 
 export function AuthScreen({ wide, onAuthenticated }) {
   const [mode, setMode] = useState('signup');
@@ -56,13 +50,19 @@ export function AuthScreen({ wide, onAuthenticated }) {
     };
   }, [username, isSignup]);
 
-  const score = auth.scorePassword(password);
-  const strength = STRENGTH[score];
+  const lock = auth.lockFor(password);
   const confirmOk = confirm.length > 0 && confirm === password;
   const confirmBad = confirm.length > 0 && confirm !== password;
 
+  /* The rules say what the password contains; the lock says what it costs
+     to guess. Either a deadbolt on its own, or a padlock that also keeps
+     every rule — so a long passphrase is never turned away for lacking a
+     capital, and "Password1!" never gets in on rules alone. */
+  const policyOk = auth.meetsPasswordPolicy(password);
+  const rulesAreShortcut = lock.bars >= auth.STRONG_LOCK_BARS;
+
   const valid = isSignup
-    ? nameCheck.state === 'ok' && score === auth.PASSWORD_RULES.length && password.length > 0 && confirmOk
+    ? nameCheck.state === 'ok' && policyOk && password.length > 0 && confirmOk
     : username.trim().length > 0 && password.length > 0;
 
   const switchMode = (next) => {
@@ -225,19 +225,40 @@ export function AuthScreen({ wide, onAuthenticated }) {
 
               {isSignup && (
                 <div className="pwmeter">
-                  <div className="pwmeter__head">
-                    <span className="pwmeter__caption">Password strength</span>
-                    <span className="pwmeter__label" style={{ color: strength.ink }}>
-                      {strength.label}
-                    </span>
+                  <div className="pwverdict" data-tier={lock.id} style={{ '--tone': lock.ink }}>
+                    <div className="pwverdict__art">
+                      <LockArt tier={lock.id} />
+                    </div>
+                    <div className="pwverdict__body">
+                      <div
+                        className="pwbars"
+                        role="meter"
+                        aria-valuemin={0}
+                        aria-valuemax={4}
+                        aria-valuenow={lock.bars}
+                        aria-valuetext={lock.name}
+                        aria-label="Password strength"
+                      >
+                        {METER_BARS.map((i) => (
+                          <span
+                            key={i}
+                            className={'pwbars__seg' + (i < lock.bars ? ' is-lit' : '')}
+                          />
+                        ))}
+                      </div>
+                      <p className="pwverdict__tier">{lock.name}</p>
+                      <p className="pwverdict__line">{lock.cracked}</p>
+                      <p className="pwverdict__bits">
+                        {lock.bits} bits &middot; {auth.combinationsLabel(lock.bits)}
+                      </p>
+                    </div>
                   </div>
-                  <div className="pwmeter__track">
-                    <div
-                      className="pwmeter__fill"
-                      style={{ width: strength.width, background: strength.ink }}
-                    />
-                  </div>
-                  <ul className="pwrules">
+                  <p className="pwrules__note">
+                    {rulesAreShortcut
+                      ? 'Long enough to stand on its own — these are optional now.'
+                      : 'Either keep all four, or just make it longer.'}
+                  </p>
+                  <ul className={'pwrules' + (rulesAreShortcut ? ' pwrules--optional' : '')}>
                     {auth.PASSWORD_RULES.map((rule) => {
                       const met = rule.test(password);
                       return (
@@ -260,7 +281,11 @@ export function AuthScreen({ wide, onAuthenticated }) {
                 <div className="field__wrap">
                   <input
                     id="rz-confirm"
-                    className="input input--adorned-right"
+                    className={
+                      'input input--adorned-right' +
+                      (confirmOk ? ' input--ok' : '') +
+                      (confirmBad ? ' input--bad' : '')
+                    }
                     name="confirm"
                     type={showPass ? 'text' : 'password'}
                     autoComplete="new-password"
@@ -276,8 +301,14 @@ export function AuthScreen({ wide, onAuthenticated }) {
                       <Check color="var(--ok)" />
                     </div>
                   )}
+                  {confirmBad && (
+                    <div className="field__adorn">
+                      <Cross color="var(--bad)" />
+                    </div>
+                  )}
                 </div>
                 {confirmBad && <p className="field__help field__help--bad">Passwords don’t match</p>}
+                {confirmOk && <p className="field__help field__help--ok">Both entries match</p>}
               </div>
             )}
 
